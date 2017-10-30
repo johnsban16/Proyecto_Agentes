@@ -2,6 +2,11 @@
 ;; DEFINICIÓN DE VARIABLES:
 ;;*************************
 extensions [gis]
+breed [vehiculos vehiculo]
+breed [peatones peaton]
+breed [pSalidas pSalida]
+
+
 globals ;; Para definir las variables globales.
 [
   aceras-dataset
@@ -20,7 +25,7 @@ turtles-own ;; Para definir los atributos de las tortugas.
 
 patches-own ;; Para definir los atributos de las parcelas.
 [
-
+  parcolor
 ]
 
 links-own ;; Para definir los atributos de los links o conexiones.
@@ -56,7 +61,7 @@ to setup ;; Para inicializar la simulación.
   set otros-dataset gis:load-dataset "data/OTROS_RodrigoFacio.shp"
   set parqueos-dataset gis:load-dataset "data/PARQUEOS_RodrigoFacio.shp"
   set propiedades-dataset gis:load-dataset "data/PROPIEDADES_RodrigoFacio.shp"
-  set salidas-peatones-dataset gis:load-dataset "data/SALIDAS.shp"
+  set salidas-peatones-dataset gis:load-dataset "data/SALIDAS_peatones.shp"
 
   ;Crear el "mundo"
   gis:set-world-envelope (gis:envelope-union-of (gis:envelope-of aceras-dataset)
@@ -75,7 +80,7 @@ to setup ;; Para inicializar la simulación.
 
   foreach gis:feature-list-of parqueos-dataset
   [
-    gis:set-drawing-color white
+    gis:set-drawing-color 2
     gis:fill parqueos-dataset 1.0
   ]
 
@@ -87,19 +92,19 @@ to setup ;; Para inicializar la simulación.
 
   foreach gis:feature-list-of aceras-dataset
   [
-    gis:set-drawing-color yellow
+    gis:set-drawing-color 86
     gis:fill aceras-dataset 1.0
   ]
 
   foreach gis:feature-list-of edificios-dataset
   [
-    gis:set-drawing-color red
+    gis:set-drawing-color 73
     gis:fill edificios-dataset 1.0
   ]
 
   foreach gis:feature-list-of otros-dataset
   [
-    gis:set-drawing-color blue
+    gis:set-drawing-color 73
     gis:fill otros-dataset 1.0
   ]
 
@@ -110,11 +115,6 @@ to setup ;; Para inicializar la simulación.
   ]
 
 
-
-
-
-
-
   init-globals ;; Para inicializar variables globales.
 
   ;; Para crear tortugas e inicializar tortugas y parcelas además.
@@ -122,10 +122,8 @@ to setup ;; Para inicializar la simulación.
   [
     init-patch
   ]
-  crt 1
-  [
-    init-turtle
-  ]
+
+   init-vehiculos
 
   reset-ticks  ;; Para inicializar el contador de ticks.
 end
@@ -187,11 +185,25 @@ end
 ;;*********************
 ;; Funciones de breeds:
 ;;*********************
+
+to init-vehiculos
+  create-vehiculos cant-vehiculos
+  [
+    set color 16
+    set shape "car"
+    set size 0.1
+  ]
+  let parcelas-parqueos (patches with [gis:intersects? self parqueos-dataset])
+  let parcelas_libres (parcelas-parqueos with [not any? turtles-here])
+  ask vehiculos[
+    if any? parcelas_libres [move-to one-of parcelas_libres]
+  ]
+end
 @#$#@#$#@
 GRAPHICS-WINDOW
-564
+390
 10
-2882
+2708
 2329
 -1
 -1
@@ -216,10 +228,10 @@ ticks
 30.0
 
 BUTTON
-141
-51
-204
-84
+282
+58
+345
+91
 NIL
 go
 T
@@ -233,10 +245,10 @@ NIL
 1
 
 BUTTON
-141
-11
-204
-44
+282
+18
+345
+51
 NIL
 setup
 NIL
@@ -248,6 +260,21 @@ NIL
 NIL
 NIL
 1
+
+SLIDER
+5
+10
+177
+43
+cant-vehiculos
+cant-vehiculos
+100
+1000
+500.0
+100
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## ¿DE QUÉ SE TRATA?
