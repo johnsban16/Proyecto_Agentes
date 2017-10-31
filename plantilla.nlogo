@@ -25,7 +25,7 @@ turtles-own ;; Para definir los atributos de las tortugas.
 
 patches-own ;; Para definir los atributos de las parcelas.
 [
-  parcolor
+  descripcion
 ]
 
 links-own ;; Para definir los atributos de los links o conexiones.
@@ -53,7 +53,7 @@ end
 to setup ;; Para inicializar la simulación.
   ca           ;; Equivale a clear-ticks + clear-turtles + clear-patches +
                ;; clear-drawing + clear-all-plots + clear-output.
-  set-patch-size 70
+  set-patch-size 3.5
   ;Cargar las coordenadas de los shapefiles
   set aceras-dataset gis:load-dataset "data/ACERAS_RodrigoFacio.shp"
   set calles-dataset gis:load-dataset "data/CALLES_RodrigoFacio.shp"
@@ -71,7 +71,6 @@ to setup ;; Para inicializar la simulación.
                                                 (gis:envelope-of parqueos-dataset)
                                                 (gis:envelope-of propiedades-dataset)
                                                 (gis:envelope-of salidas-peatones-dataset))
-
   foreach gis:feature-list-of propiedades-dataset
   [
     gis:set-drawing-color green
@@ -114,6 +113,7 @@ to setup ;; Para inicializar la simulación.
     gis:fill salidas-peatones-dataset 1.0
   ]
 
+  ;gis:apply-coverage calles-dataset "DESCRIPCIO" descripcion
 
   init-globals ;; Para inicializar variables globales.
 
@@ -122,8 +122,8 @@ to setup ;; Para inicializar la simulación.
   [
     init-patch
   ]
-
-   init-vehiculos
+  init-peatones
+  init-vehiculos
 
   reset-ticks  ;; Para inicializar el contador de ticks.
 end
@@ -187,40 +187,55 @@ end
 ;;*********************
 
 to init-vehiculos
+  gis:apply-coverage parqueos-dataset "DESCRIPCIO" descripcion
   create-vehiculos cant-vehiculos
   [
     set color 16
     set shape "car"
-    set size 0.1
+    set size 2
   ]
-  let parcelas-parqueos (patches with [gis:intersects? self parqueos-dataset])
-  let parcelas_libres (parcelas-parqueos with [not any? turtles-here])
+  let parcelas-parqueos (patches with [descripcion = "Parqueo"])
   ask vehiculos[
-    if any? parcelas_libres [move-to one-of parcelas_libres]
+    if any? parcelas-parqueos [move-to one-of parcelas-parqueos]
+  ]
+end
+
+to init-peatones
+  gis:apply-coverage edificios-dataset "TIPO" descripcion
+  ;cambiar variable
+  create-peatones cant-vehiculos
+  [
+    set color white
+    set shape "person"
+    set size 2
+  ]
+  let parcelas-personas (patches with [descripcion = "Edificio"])
+  ask peatones[
+    if any? parcelas-personas [move-to one-of parcelas-personas]
   ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 390
 10
-2708
-2329
+2151
+1772
 -1
 -1
-70.0
+3.5
 1
 10
 1
 1
 1
 0
+0
+0
 1
-1
-1
--16
-16
--16
-16
+-250
+250
+-250
+250
 0
 0
 1
