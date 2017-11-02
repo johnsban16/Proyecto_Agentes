@@ -16,6 +16,7 @@ globals ;; Para definir las variables globales.
   parqueos-dataset
   propiedades-dataset
   salidas-peatones-dataset
+  salidas-vehiculos-dataset
 ]
 
 turtles-own ;; Para definir los atributos de las tortugas.
@@ -61,7 +62,8 @@ to setup ;; Para inicializar la simulación.
   set otros-dataset gis:load-dataset "data/OTROS_RodrigoFacio.shp"
   set parqueos-dataset gis:load-dataset "data/PARQUEOS_RodrigoFacio.shp"
   set propiedades-dataset gis:load-dataset "data/PROPIEDADES_RodrigoFacio.shp"
-  set salidas-peatones-dataset gis:load-dataset "data/SALIDAS_peatones.shp"
+  set salidas-peatones-dataset gis:load-dataset "data/SALIDAS_P.shp"
+  set salidas-vehiculos-dataset gis:load-dataset "data/SALIDAS_V.shp"
 
   ;Crear el "mundo"
   gis:set-world-envelope (gis:envelope-union-of (gis:envelope-of aceras-dataset)
@@ -70,7 +72,8 @@ to setup ;; Para inicializar la simulación.
                                                 (gis:envelope-of otros-dataset)
                                                 (gis:envelope-of parqueos-dataset)
                                                 (gis:envelope-of propiedades-dataset)
-                                                (gis:envelope-of salidas-peatones-dataset))
+                                                (gis:envelope-of salidas-peatones-dataset)
+                                                (gis:envelope-of salidas-vehiculos-dataset))
   foreach gis:feature-list-of propiedades-dataset
   [
     gis:set-drawing-color green
@@ -111,6 +114,12 @@ to setup ;; Para inicializar la simulación.
   [
     gis:set-drawing-color brown
     gis:fill salidas-peatones-dataset 1.0
+  ]
+
+  foreach gis:feature-list-of salidas-vehiculos-dataset
+  [
+    gis:set-drawing-color 125
+    gis:fill salidas-vehiculos-dataset 1.0
   ]
 
   ;gis:apply-coverage calles-dataset "DESCRIPCIO" descripcion
