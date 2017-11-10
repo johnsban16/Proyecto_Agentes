@@ -17,6 +17,16 @@ globals ;; Para definir las variables globales.
   propiedades-dataset
   salidas-peatones-dataset
   salidas-vehiculos-dataset
+
+  ;;Patches que intersecan a los poligonos
+  aceras-patchset
+  calles-patchset
+  edificios-patchset
+  otros-patchset
+  propiedades-patchset
+  parqueos-patchset
+  salidas-peatones-patchset
+  salidas-vehiculos-patchset
 ]
 
 turtles-own ;; Para definir los atributos de las tortugas.
@@ -26,6 +36,7 @@ turtles-own ;; Para definir los atributos de las tortugas.
 
 patches-own ;; Para definir los atributos de las parcelas.
 [
+  coverage
   descripcion
 ]
 
@@ -54,7 +65,7 @@ end
 to setup ;; Para inicializar la simulación.
   ca           ;; Equivale a clear-ticks + clear-turtles + clear-patches +
                ;; clear-drawing + clear-all-plots + clear-output.
-  set-patch-size 3.5
+  set-patch-size 5
   ;Cargar las coordenadas de los shapefiles
   set aceras-dataset gis:load-dataset "data/ACERAS_RodrigoFacio.shp"
   set calles-dataset gis:load-dataset "data/CALLES_RodrigoFacio.shp"
@@ -125,7 +136,7 @@ to setup ;; Para inicializar la simulación.
   ;gis:apply-coverage calles-dataset "DESCRIPCIO" descripcion
 
   init-globals ;; Para inicializar variables globales.
-
+  intersecar-pacthes-con-poligonos
   ;; Para crear tortugas e inicializar tortugas y parcelas además.
   ask patches
   [
@@ -153,6 +164,49 @@ end
 to actualizar-salidas ;; Para actualizar todas las salidas del modelo.
 end
 
+to intersecar-pacthes-con-poligonos
+   gis:apply-coverage propiedades-dataset "DESCRIPCIO" coverage
+  set propiedades-patchset patches with [coverage = "Propiedad"]
+  ask propiedades-patchset [
+    set descripcion "Propiedad"
+  ]
+  gis:apply-coverage aceras-dataset "DESCRIPCIO" coverage
+  set aceras-patchset patches with [coverage = "Acera"]
+  ask aceras-patchset [
+    set descripcion "Acera"
+  ]
+  gis:apply-coverage calles-dataset "DESCRIPCIO" coverage
+  set calles-patchset patches with [coverage = "Calle"]
+  ask calles-patchset [
+    set descripcion "Calle"
+  ]
+  gis:apply-coverage edificios-dataset "TIPO" coverage
+  set edificios-patchset patches with [coverage = "Edificio"]
+  ask edificios-patchset [
+    set descripcion "Edificio"
+  ]
+  gis:apply-coverage parqueos-dataset "DESCRIPCIO" coverage
+  set parqueos-patchset patches with [coverage = "Parqueo"]
+  ask parqueos-patchset [
+    set descripcion "Parqueo"
+  ]
+  gis:apply-coverage otros-dataset "TIPO" coverage
+  set otros-patchset patches with [coverage = "Otro"]
+  ask otros-patchset [
+    set descripcion "Otros"
+  ]
+  gis:apply-coverage salidas-peatones-dataset "TIPO" coverage
+  set salidas-peatones-patchset patches with [coverage = "SalidaPeaton"]
+  ask salidas-peatones-patchset [
+    set descripcion "SalidaPeaton"
+  ]
+  gis:apply-coverage salidas-vehiculos-dataset "TIPO" coverage
+  set salidas-vehiculos-patchset patches with [coverage = "SalidaVehiculo"]
+  ask salidas-vehiculos-patchset [
+    set descripcion "SalidaVehiculo"
+  ]
+
+end
 
 
 ;;**********************
@@ -196,42 +250,38 @@ end
 ;;*********************
 
 to init-vehiculos
-  gis:apply-coverage parqueos-dataset "DESCRIPCIO" descripcion
-  create-vehiculos cant-vehiculos
+  create-vehiculos grado-ocupacion-parqueos
   [
-    set color 16
+    set color yellow
     set shape "car"
     set size 2
   ]
-  let parcelas-parqueos (patches with [descripcion = "Parqueo"])
   ask vehiculos[
-    if any? parcelas-parqueos [move-to one-of parcelas-parqueos]
+    if any? parqueos-patchset [move-to one-of parqueos-patchset]
   ]
 end
 
 to init-peatones
-  gis:apply-coverage edificios-dataset "TIPO" descripcion
   ;cambiar variable
-  create-peatones cant-vehiculos
+  create-peatones grado-ocupacion-parqueos
   [
     set color white
     set shape "person"
     set size 2
   ]
-  let parcelas-personas (patches with [descripcion = "Edificio"])
   ask peatones[
-    if any? parcelas-personas [move-to one-of parcelas-personas]
+    if any? edificios-patchset [move-to one-of edificios-patchset]
   ]
 end
 @#$#@#$#@
 GRAPHICS-WINDOW
 390
 10
-2151
-1772
+1403
+1024
 -1
 -1
-3.5
+5.0
 1
 10
 1
@@ -241,10 +291,10 @@ GRAPHICS-WINDOW
 0
 0
 1
--250
-250
--250
-250
+-100
+100
+-100
+100
 0
 0
 1
@@ -252,10 +302,10 @@ ticks
 30.0
 
 BUTTON
-282
-58
-345
-91
+313
+50
+376
+83
 NIL
 go
 T
@@ -269,10 +319,10 @@ NIL
 1
 
 BUTTON
-282
-18
-345
-51
+313
+10
+376
+43
 NIL
 setup
 NIL
@@ -286,19 +336,75 @@ NIL
 1
 
 SLIDER
-5
+17
 10
-177
+215
 43
-cant-vehiculos
-cant-vehiculos
+grado-ocupacion-parqueos
+grado-ocupacion-parqueos
+1
 100
-1000
-500.0
-100
+100.0
+1
 1
 NIL
 HORIZONTAL
+
+SLIDER
+16
+48
+188
+81
+grado-ocupacion-calle
+grado-ocupacion-calle
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+14
+84
+204
+117
+grado-ocupacion-edificios
+grado-ocupacion-edificios
+0
+100
+49.0
+1
+1
+NIL
+HORIZONTAL
+
+SLIDER
+14
+124
+186
+157
+desesperacion
+desesperacion
+0
+100
+50.0
+1
+1
+NIL
+HORIZONTAL
+
+SWITCH
+13
+166
+182
+199
+entradas-habilitadas
+entradas-habilitadas
+1
+1
+-1000
 
 @#$#@#$#@
 ## ¿DE QUÉ SE TRATA?
@@ -399,6 +505,23 @@ arrow
 true
 0
 Polygon -7500403 true true 150 0 0 150 105 150 105 293 195 293 195 150 300 150
+
+banana
+false
+0
+Polygon -7500403 false true 25 78 29 86 30 95 27 103 17 122 12 151 18 181 39 211 61 234 96 247 155 259 203 257 243 245 275 229 288 205 284 192 260 188 249 187 214 187 188 188 181 189 144 189 122 183 107 175 89 158 69 126 56 95 50 83 38 68
+Polygon -7500403 true true 39 69 26 77 30 88 29 103 17 124 12 152 18 179 34 205 60 233 99 249 155 260 196 259 237 248 272 230 289 205 284 194 264 190 244 188 221 188 185 191 170 191 145 190 123 186 108 178 87 157 68 126 59 103 52 88
+Line -16777216 false 54 169 81 195
+Line -16777216 false 75 193 82 199
+Line -16777216 false 99 211 118 217
+Line -16777216 false 241 211 254 210
+Line -16777216 false 261 224 276 214
+Polygon -16777216 true false 283 196 273 204 287 208
+Polygon -16777216 true false 36 114 34 129 40 136
+Polygon -16777216 true false 46 146 53 161 53 152
+Line -16777216 false 65 132 82 162
+Line -16777216 false 156 250 199 250
+Polygon -16777216 true false 26 77 30 90 50 85 39 69
 
 box
 false
