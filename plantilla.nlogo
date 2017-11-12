@@ -17,6 +17,7 @@ globals ;; Para definir las variables globales.
   propiedades-dataset
   salidas-peatones-dataset
   salidas-vehiculos-dataset
+  entradas-vehiculos-dataset
 
   ;;Patches que intersecan a los poligonos
   aceras-patchset
@@ -27,6 +28,7 @@ globals ;; Para definir las variables globales.
   parqueos-patchset
   salidas-peatones-patchset
   salidas-vehiculos-patchset
+  entradas-vehiculos-patchset
 ]
 
 turtles-own ;; Para definir los atributos de las tortugas.
@@ -38,6 +40,7 @@ patches-own ;; Para definir los atributos de las parcelas.
 [
   coverage
   descripcion
+  ocupacion
 ]
 
 links-own ;; Para definir los atributos de los links o conexiones.
@@ -75,6 +78,7 @@ to setup ;; Para inicializar la simulación.
   set propiedades-dataset gis:load-dataset "data/PROPIEDADES_RodrigoFacio.shp"
   set salidas-peatones-dataset gis:load-dataset "data/SALIDAS_P.shp"
   set salidas-vehiculos-dataset gis:load-dataset "data/SALIDAS_V.shp"
+  set entradas-vehiculos-dataset gis:load-dataset "data/ENTRADAS_V.shp"
 
   ;Crear el "mundo"
   gis:set-world-envelope (gis:envelope-union-of (gis:envelope-of aceras-dataset)
@@ -84,7 +88,8 @@ to setup ;; Para inicializar la simulación.
                                                 (gis:envelope-of parqueos-dataset)
                                                 (gis:envelope-of propiedades-dataset)
                                                 (gis:envelope-of salidas-peatones-dataset)
-                                                (gis:envelope-of salidas-vehiculos-dataset))
+                                                (gis:envelope-of salidas-vehiculos-dataset)
+                                                (gis:envelope-of entradas-vehiculos-dataset))
   foreach gis:feature-list-of propiedades-dataset
   [
     gis:set-drawing-color green
@@ -131,6 +136,11 @@ to setup ;; Para inicializar la simulación.
   [
     gis:set-drawing-color 125
     gis:fill salidas-vehiculos-dataset 1.0
+  ]
+  foreach gis:feature-list-of entradas-vehiculos-dataset
+  [
+    gis:set-drawing-color 105
+    gis:fill entradas-vehiculos-dataset 1.0
   ]
 
   ;gis:apply-coverage calles-dataset "DESCRIPCIO" descripcion
@@ -190,6 +200,7 @@ to intersecar-pacthes-con-poligonos
   ask parqueos-patchset [
     set descripcion "Parqueo"
   ]
+  gis:apply-coverage parqueos-dataset "CAPACIDAD" ocupacion
   gis:apply-coverage otros-dataset "TIPO" coverage
   set otros-patchset patches with [coverage = "Otro"]
   ask otros-patchset [
@@ -204,6 +215,11 @@ to intersecar-pacthes-con-poligonos
   set salidas-vehiculos-patchset patches with [coverage = "SalidaVehiculo"]
   ask salidas-vehiculos-patchset [
     set descripcion "SalidaVehiculo"
+  ]
+  gis:apply-coverage entradas-vehiculos-dataset "TIPO" coverage
+  set entradas-vehiculos-patchset patches with [coverage = "EntradaVehiculo"]
+  ask entradas-vehiculos-patchset [
+    set descripcion "EntradaVehiculo"
   ]
 
 end
@@ -254,7 +270,7 @@ to init-vehiculos
   [
     set color yellow
     set shape "car"
-    set size 2
+    set size 1.5
   ]
   ask vehiculos[
     if any? parqueos-patchset [move-to one-of parqueos-patchset]
@@ -263,11 +279,11 @@ end
 
 to init-peatones
   ;cambiar variable
-  create-peatones grado-ocupacion-parqueos
+  create-peatones grado-ocupacion-edificios
   [
     set color white
     set shape "person"
-    set size 2
+    set size 0.75
   ]
   ask peatones[
     if any? edificios-patchset [move-to one-of edificios-patchset]
@@ -368,14 +384,14 @@ HORIZONTAL
 SLIDER
 14
 84
-204
+211
 117
 grado-ocupacion-edificios
 grado-ocupacion-edificios
-0
 100
-49.0
-1
+1500
+1000.0
+100
 1
 NIL
 HORIZONTAL
