@@ -68,7 +68,7 @@ end
 to setup ;; Para inicializar la simulación.
   ca           ;; Equivale a clear-ticks + clear-turtles + clear-patches +
                ;; clear-drawing + clear-all-plots + clear-output.
-  set-patch-size 5
+  set-patch-size 10
   ;Cargar las coordenadas de los shapefiles
   set aceras-dataset gis:load-dataset "data/ACERAS_RodrigoFacio.shp"
   set calles-dataset gis:load-dataset "data/CALLES_RodrigoFacio.shp"
@@ -159,13 +159,14 @@ to setup ;; Para inicializar la simulación.
 end
 
 to go ;; Para ejecutar la simulación.
-  ask turtles [t-comportamiento-turtle]
+  ask vehiculos [drive]
   tick
+  show ticks
   actualizar-salidas
-  if ticks >= 25  ;; En caso de que la simulación esté controlada por cantidad de ticks.
+  if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
     [stop]
-end
 
+end
 
 ;;*******************************
 ;; Otras funciones globales:
@@ -273,9 +274,39 @@ to init-vehiculos
     set size 1.5
   ]
   ask vehiculos[
-    if any? parqueos-patchset [move-to one-of parqueos-patchset]
+    if any? parqueos-patchset [move-to one-of calles-patchset]
   ]
 end
+
+to steer
+  let ohead heading
+  let rc 0
+  let lc 0
+  while [[descripcion] of patch-ahead 3  != "Calle"]
+  [
+    set rc rc + 1
+    rt 10
+  ]
+  let right-heading heading
+  set heading ohead
+  while [[descripcion] of patch-ahead 3 != "Calle"]
+  [
+    set lc lc + 1
+    lt 10
+  ]
+  if rc < lc
+  [ set heading right-heading]
+
+end
+
+to drive
+  if [descripcion] of patch-ahead 3 != "Calle"
+  [
+    ask self [steer]
+  ]
+  fd 1
+end
+
 
 to init-peatones
   ;cambiar variable
@@ -293,11 +324,11 @@ end
 GRAPHICS-WINDOW
 390
 10
-1403
-1024
+2408
+2029
 -1
 -1
-5.0
+10.0
 1
 10
 1
@@ -318,10 +349,10 @@ ticks
 30.0
 
 BUTTON
-313
-50
-376
-83
+242
+777
+305
+810
 NIL
 go
 T
@@ -335,10 +366,10 @@ NIL
 1
 
 BUTTON
-313
-10
-376
-43
+242
+737
+305
+770
 NIL
 setup
 NIL
@@ -360,7 +391,7 @@ grado-ocupacion-parqueos
 grado-ocupacion-parqueos
 1
 100
-100.0
+53.0
 1
 1
 NIL
@@ -824,7 +855,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.1
+NetLogo 6.0.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
