@@ -277,6 +277,10 @@ to init-vehiculos
   ]
 end
 
+to salir-de-parqueo
+  let sigmoidal 1 / ( 1 + exp desesperacion )
+end
+
 to init-peatones
   ;cambiar variable
   create-peatones grado-ocupacion-edificios
