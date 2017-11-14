@@ -349,11 +349,31 @@ to drive
   fd 1
 end
 
+
 to check-for-intersection
-  let patch-right patch-right-and-ahead 90 2
-  if gis:intersects? patch-right exits-cars-dataset
+  if any? patches in-radius 2 with [gis:intersects? self lanes-dataset]
   [
-    set heading towards patch-right
+    let patch-right patch-right-and-ahead 90 1
+    [
+      set heading towards patch-right
+    ]
+  ]
+end
+
+to check-for-exit
+  let exit one-of patches in-cone 5 90 with [gis:intersects? self exits-cars-dataset]
+  if exit = patch-here [set exit nobody]
+  if exit != nobody
+  [
+    set heading towards exit
+  ]
+end
+
+to check-if-exits
+  if gis:intersects? patch-here  exits-cars-dataset
+  [
+     show "sale"
+     die
   ]
 end
 
@@ -523,7 +543,7 @@ SLIDER
 13
 161
 246
-195
+194
 acceleration
 acceleration
 0.001
@@ -936,7 +956,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.1
+NetLogo 6.0.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
