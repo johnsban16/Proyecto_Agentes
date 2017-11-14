@@ -50,13 +50,10 @@ patches-own ;; Para definir los atributos de las parcelas.
 vehiculos-own
 [
   velocidad
-  aceleracion
 ]
 
 peatones-own
 [
-  velocidad
-  aceleracion
 ]
 ;;********************
 ;; variables de breeds
@@ -80,6 +77,37 @@ to setup ;; Para inicializar la simulación.
                ;; clear-drawing + clear-all-plots + clear-output.
   set-patch-size 10
   ;Cargar las coordenadas de los shapefiles
+  setup-geo-data
+  init-globals ;; Para inicializar variables globales.
+  intersecar-pacthes-con-poligonos
+  ;; Para crear tortugas e inicializar tortugas y parcelas además.
+  ask patches
+  [
+    init-patch
+  ]
+  init-peatones
+  init-vehiculos
+  reset-ticks  ;; Para inicializar el contador de ticks.
+end
+
+to go ;; Para ejecutar la simulación.
+  ask vehiculos [drive]
+  tick
+  show ticks
+  actualizar-salidas
+  if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
+    [stop]
+
+end
+
+;;*******************************
+;; Otras funciones globales:
+;;*******************************
+
+to actualizar-salidas ;; Para actualizar todas las salidas del modelo.
+end
+
+to setup-geo-data
   set aceras-dataset gis:load-dataset "data/ACERAS_RodrigoFacio.shp"
   set calles-dataset gis:load-dataset "data/CALLES_RodrigoFacio.shp"
   set edificios-dataset gis:load-dataset "data/EDIFICIOS_RodrigoFacio.shp"
@@ -167,40 +195,10 @@ to setup ;; Para inicializar la simulación.
     gis:fill carriles-dataset 1.0
   ]
 
-
-
-
-  init-globals ;; Para inicializar variables globales.
-  intersecar-pacthes-con-poligonos
-  ;; Para crear tortugas e inicializar tortugas y parcelas además.
-  ask patches
-  [
-    init-patch
-  ]
-  init-peatones
-  init-vehiculos
-  reset-ticks  ;; Para inicializar el contador de ticks.
-end
-
-to go ;; Para ejecutar la simulación.
-  ask vehiculos [drive]
-  tick
-  show ticks
-  actualizar-salidas
-  if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
-    [stop]
-
-end
-
-;;*******************************
-;; Otras funciones globales:
-;;*******************************
-
-to actualizar-salidas ;; Para actualizar todas las salidas del modelo.
 end
 
 to intersecar-pacthes-con-poligonos
-   gis:apply-coverage propiedades-dataset "DESCRIPCIO" coverage
+  gis:apply-coverage propiedades-dataset "DESCRIPCIO" coverage
   set propiedades-patchset patches with [coverage = "Propiedad"]
   ask propiedades-patchset [
     set descripcion "Propiedad"
@@ -275,18 +273,6 @@ to init-patch ;; Para inicializar una parcela a la vez.
 end
 
 to p-comportamiento-patch ;; Cambiar por nombre significativo de comportamiento de patch
-
-end
-
-;;********************
-;; Funciones de links:
-;;********************
-
-to init-link ;; Para inicializar un link o conexión a la vez.
-
-end
-
-to l-comportamiento-link ;; Cambiar por nombre significativo de comportamiento de link
 
 end
 
@@ -412,13 +398,13 @@ NIL
 SLIDER
 17
 10
-215
+185
 43
 grado-ocupacion-parqueos
 grado-ocupacion-parqueos
 1
 100
-53.0
+54.0
 1
 1
 NIL
@@ -427,13 +413,13 @@ HORIZONTAL
 SLIDER
 16
 48
-188
+185
 81
 grado-ocupacion-calle
 grado-ocupacion-calle
 0
 100
-50.0
+51.0
 1
 1
 NIL
@@ -442,13 +428,13 @@ HORIZONTAL
 SLIDER
 14
 84
-211
+185
 117
 grado-ocupacion-edificios
 grado-ocupacion-edificios
 100
 1500
-1000.0
+1100.0
 100
 1
 NIL
@@ -470,15 +456,30 @@ NIL
 HORIZONTAL
 
 SWITCH
-13
-166
-182
-199
+202
+10
+371
+43
 entradas-habilitadas
 entradas-habilitadas
 1
 1
 -1000
+
+SLIDER
+13
+161
+185
+194
+aceleracion
+aceleracion
+0.001
+0.010
+0.001
+0.001
+1
+NIL
+HORIZONTAL
 
 @#$#@#$#@
 ## ¿DE QUÉ SE TRATA?
