@@ -1,9 +1,11 @@
 ;;*************************
 ;; DEFINICIÓN DE VARIABLES:
 ;;*************************
-extensions [gis]
+extensions [gis profiler]
+
 breed [vehiculos vehiculo]
 breed [peatones peaton]
+;;breed [vSalidas vSalida]
 breed [pSalidas pSalida]
 
 
@@ -34,11 +36,8 @@ globals ;; Para definir las variables globales.
   intersecciones-patchset
   carriles-patchset
 ]
-
 turtles-own ;; Para definir los atributos de las tortugas.
-[
-
-]
+[]
 
 patches-own ;; Para definir los atributos de las parcelas.
 [
@@ -46,6 +45,11 @@ patches-own ;; Para definir los atributos de las parcelas.
   descripcion
   ocupacion
 ]
+
+;;********************
+;; variables de breeds
+;;********************
+
 
 vehiculos-own
 [
@@ -55,9 +59,6 @@ vehiculos-own
 peatones-own
 [
 ]
-;;********************
-;; variables de breeds
-;;********************
 
 
 ;;**************************************
@@ -91,13 +92,15 @@ to setup ;; Para inicializar la simulación.
 end
 
 to go ;; Para ejecutar la simulación.
+    ;profiler:start
   ask vehiculos [drive]
   tick
-  show ticks
   actualizar-salidas
   if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
     [stop]
-
+ ; profiler:stop
+ ; print profiler:report  ;; view the results
+ ; profiler:reset         ;; clear the data
 end
 
 ;;*******************************
@@ -189,12 +192,11 @@ to setup-geo-data
     gis:set-drawing-color 9
     gis:fill intersecciones-dataset 1.0
   ]
-  foreach gis:feature-list-of carriles-dataset
-  [
-    gis:set-drawing-color red
-    gis:fill carriles-dataset 1.0
-  ]
-
+ foreach gis:feature-list-of carriles-dataset
+ [
+   gis:set-drawing-color red
+   gis:fill carriles-dataset 1.0
+ ]
 end
 
 to intersecar-pacthes-con-poligonos
@@ -252,17 +254,6 @@ to intersecar-pacthes-con-poligonos
 end
 
 
-;;**********************
-;; Funciones de turtles:
-;;**********************
-
-to init-turtle ;; Para inicializar una tortuga a la vez.
-
-end
-
-to t-comportamiento-turtle ;; Se debería cambiar el nombre para que represente algo signficativo en la simulación.
-
-end
 
 ;;**********************
 ;; Funciones de patches:
@@ -276,9 +267,14 @@ to p-comportamiento-patch ;; Cambiar por nombre significativo de comportamiento 
 
 end
 
-;;*********************
+
+;;****************************************
 ;; Funciones de breeds:
-;;*********************
+;;****************************************
+
+;;------------------------
+;; Funciones de vehiculos:
+;;------------------------
 
 to init-vehiculos
   create-vehiculos grado-ocupacion-parqueos
@@ -292,34 +288,76 @@ to init-vehiculos
   ]
 end
 
-to steer
+to steer-without-lanes
   let ohead heading
   let rc 0
   let lc 0
+  ;show "begin steer"
   while [[descripcion] of patch-ahead 3  != "Calle"]
   [
+    if rc >= 18 [stop]
+    ;show "derecha"
     set rc rc + 1
-    rt 10
+    rt 20
   ]
   let right-heading heading
   set heading ohead
   while [[descripcion] of patch-ahead 3 != "Calle"]
   [
+    if lc >= 18 [stop]
     set lc lc + 1
-    lt 10
+    lt 20
   ]
+  ;if rc = 18 or lc = 18 [die]
   if rc < lc
   [ set heading right-heading]
 
 end
 
-to drive
-  if [descripcion] of patch-ahead 3 != "Calle"
+to steer
+  let front-terrain patch-ahead 3
+  ifelse any? patches in-radius 2 with [gis:intersects? self carriles-dataset]
   [
+    ifelse [descripcion] of front-terrain != "Calle" and not gis:intersects? front-terrain carriles-dataset
+    [
+      lt 20
+    ]
+    [if gis:intersects? front-terrain carriles-dataset
+      [rt 20]
+    ]
+  ]
+  [
+    ask self [steer-without-lanes]
+  ]
+
+
+end
+
+to drive
+
+  if [descripcion] of patch-ahead 3 != "Calle" or gis:intersects? patch-ahead 3 carriles-dataset
+  [
+    ;show "before steer"
     ask self [steer]
   ]
+
+  ask self [check-for-intersection]
+  ;if
   fd 1
 end
+
+to check-for-intersection
+  let patch-right patch-right-and-ahead 90 2
+  if gis:intersects? patch-right salidas-vehiculos-dataset
+  [
+    set heading towards patch-right
+  ]
+end
+
+
+;;------------------------
+;; Funciones de peatones:
+;;------------------------
 
 to init-peatones
   ;cambiar variable
@@ -333,12 +371,21 @@ to init-peatones
     if any? edificios-patchset [move-to one-of edificios-patchset]
   ]
 end
+
+
+;;------------------------
+;; Funciones de salidas de vehículos:
+;;------------------------
+;;to init-vSalidas
+ ;; let exit-patches patches with [gis:intersects? self salidas-vehiculos-dataset]
+ ;;  ask exit-patches [sprout-vSalidas 1]
+;;end
 @#$#@#$#@
 GRAPHICS-WINDOW
-390
-10
-2408
-2029
+496
+94
+2514
+2113
 -1
 -1
 10.0
