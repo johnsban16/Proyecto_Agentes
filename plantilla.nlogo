@@ -3,38 +3,38 @@
 ;;*************************
 extensions [gis profiler]
 
-breed [vehiculos vehiculo]
-breed [peatones peaton]
+breed [cars car]
+breed [pedestrians pedestrian]
 ;;breed [vSalidas vSalida]
 breed [pSalidas pSalida]
 
 
 globals ;; Para definir las variables globales.
 [
-  aceras-dataset
-  calles-dataset
-  edificios-dataset
-  otros-dataset
-  parqueos-dataset
-  propiedades-dataset
-  salidas-peatones-dataset
-  salidas-vehiculos-dataset
-  entradas-vehiculos-dataset
-  intersecciones-dataset
-  carriles-dataset
+  sidewalks-dataset
+  streets-dataset
+  buildings-dataset
+  others-dataset
+  parkings-dataset
+  properties-dataset
+  exits-pedestrians-dataset
+  exits-cars-dataset
+  entrances-cars-dataset
+  intersections-dataset
+  lanes-dataset
 
   ;;Patches que intersecan a los poligonos
-  aceras-patchset
-  calles-patchset
-  edificios-patchset
-  otros-patchset
-  propiedades-patchset
-  parqueos-patchset
-  salidas-peatones-patchset
-  salidas-vehiculos-patchset
-  entradas-vehiculos-patchset
-  intersecciones-patchset
-  carriles-patchset
+  sidewalks-patchset
+  streets-patchset
+  buildings-patchset
+  others-patchset
+  properties-patchset
+  parkings-patchset
+  exits-pedestrians-patchset
+  exits-cars-patchset
+  entrances-cars-patchset
+  intersections-patchset
+  lanes-patchset
 ]
 turtles-own ;; Para definir los atributos de las tortugas.
 []
@@ -42,8 +42,8 @@ turtles-own ;; Para definir los atributos de las tortugas.
 patches-own ;; Para definir los atributos de las parcelas.
 [
   coverage
-  descripcion
-  ocupacion
+  description
+  occupation
 ]
 
 ;;********************
@@ -51,12 +51,13 @@ patches-own ;; Para definir los atributos de las parcelas.
 ;;********************
 
 
-vehiculos-own
+cars-own
 [
-  velocidad
+  speed
+  max-speed
 ]
 
-peatones-own
+pedestrians-own
 [
 ]
 
@@ -80,20 +81,20 @@ to setup ;; Para inicializar la simulación.
   ;Cargar las coordenadas de los shapefiles
   setup-geo-data
   init-globals ;; Para inicializar variables globales.
-  intersecar-pacthes-con-poligonos
+  intersect-patches-with-polygons
   ;; Para crear tortugas e inicializar tortugas y parcelas además.
   ask patches
   [
     init-patch
   ]
-  init-peatones
-  init-vehiculos
+  init-pedestrians
+  init-cars
   reset-ticks  ;; Para inicializar el contador de ticks.
 end
 
 to go ;; Para ejecutar la simulación.
     ;profiler:start
-  ask vehiculos [drive]
+  ask cars [drive]
   tick
   actualizar-salidas
   if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
@@ -111,145 +112,145 @@ to actualizar-salidas ;; Para actualizar todas las salidas del modelo.
 end
 
 to setup-geo-data
-  set aceras-dataset gis:load-dataset "data/ACERAS_RodrigoFacio.shp"
-  set calles-dataset gis:load-dataset "data/CALLES_RodrigoFacio.shp"
-  set edificios-dataset gis:load-dataset "data/EDIFICIOS_RodrigoFacio.shp"
-  set otros-dataset gis:load-dataset "data/OTROS_RodrigoFacio.shp"
-  set parqueos-dataset gis:load-dataset "data/PARQUEOS_RodrigoFacio.shp"
-  set propiedades-dataset gis:load-dataset "data/PROPIEDADES_RodrigoFacio.shp"
-  set salidas-peatones-dataset gis:load-dataset "data/SALIDAS_P.shp"
-  set salidas-vehiculos-dataset gis:load-dataset "data/SALIDAS_V.shp"
-  set entradas-vehiculos-dataset gis:load-dataset "data/ENTRADAS_V.shp"
-  set intersecciones-dataset gis:load-dataset "data/INTERSECCIONES_CALLES.shp"
-  set carriles-dataset gis:load-dataset "data/CARRILES.shp"
+  set sidewalks-dataset gis:load-dataset "data/ACERAS_RodrigoFacio.shp"
+  set streets-dataset gis:load-dataset "data/CALLES_RodrigoFacio.shp"
+  set buildings-dataset gis:load-dataset "data/EDIFICIOS_RodrigoFacio.shp"
+  set others-dataset gis:load-dataset "data/OTROS_RodrigoFacio.shp"
+  set parkings-dataset gis:load-dataset "data/PARQUEOS_RodrigoFacio.shp"
+  set properties-dataset gis:load-dataset "data/PROPIEDADES_RodrigoFacio.shp"
+  set exits-pedestrians-dataset gis:load-dataset "data/SALIDAS_P.shp"
+  set exits-cars-dataset gis:load-dataset "data/SALIDAS_V.shp"
+  set entrances-cars-dataset gis:load-dataset "data/ENTRADAS_V.shp"
+  set intersections-dataset gis:load-dataset "data/INTERSECCIONES_CALLES.shp"
+  set lanes-dataset gis:load-dataset "data/CARRILES.shp"
 
   ;Crear el "mundo"
-  gis:set-world-envelope (gis:envelope-union-of (gis:envelope-of aceras-dataset)
-                                                (gis:envelope-of calles-dataset)
-                                                (gis:envelope-of edificios-dataset)
-                                                (gis:envelope-of otros-dataset)
-                                                (gis:envelope-of parqueos-dataset)
-                                                (gis:envelope-of propiedades-dataset)
-                                                (gis:envelope-of salidas-peatones-dataset)
-                                                (gis:envelope-of salidas-vehiculos-dataset)
-                                                (gis:envelope-of entradas-vehiculos-dataset)
-                                                (gis:envelope-of intersecciones-dataset)
-                                                (gis:envelope-of carriles-dataset))
-  foreach gis:feature-list-of propiedades-dataset
+  gis:set-world-envelope (gis:envelope-union-of (gis:envelope-of sidewalks-dataset)
+                                                (gis:envelope-of streets-dataset)
+                                                (gis:envelope-of buildings-dataset)
+                                                (gis:envelope-of others-dataset)
+                                                (gis:envelope-of parkings-dataset)
+                                                (gis:envelope-of properties-dataset)
+                                                (gis:envelope-of exits-pedestrians-dataset)
+                                                (gis:envelope-of exits-cars-dataset)
+                                                (gis:envelope-of entrances-cars-dataset)
+                                                (gis:envelope-of intersections-dataset)
+                                                (gis:envelope-of lanes-dataset))
+  foreach gis:feature-list-of properties-dataset
   [
     gis:set-drawing-color green
-    gis:fill propiedades-dataset 1.0
+    gis:fill properties-dataset 1.0
   ]
 
-  foreach gis:feature-list-of parqueos-dataset
+  foreach gis:feature-list-of parkings-dataset
   [
     gis:set-drawing-color 2
-    gis:fill parqueos-dataset 1.0
+    gis:fill parkings-dataset 1.0
   ]
 
-  foreach gis:feature-list-of calles-dataset
+  foreach gis:feature-list-of streets-dataset
   [
     gis:set-drawing-color gray
-    gis:fill calles-dataset 1.0
+    gis:fill streets-dataset 1.0
   ]
 
-  foreach gis:feature-list-of aceras-dataset
+  foreach gis:feature-list-of sidewalks-dataset
   [
     gis:set-drawing-color 86
-    gis:fill aceras-dataset 1.0
+    gis:fill sidewalks-dataset 1.0
   ]
 
-  foreach gis:feature-list-of edificios-dataset
+  foreach gis:feature-list-of buildings-dataset
   [
     gis:set-drawing-color 73
-    gis:fill edificios-dataset 1.0
+    gis:fill buildings-dataset 1.0
   ]
 
-  foreach gis:feature-list-of otros-dataset
+  foreach gis:feature-list-of others-dataset
   [
     gis:set-drawing-color 73
-    gis:fill otros-dataset 1.0
+    gis:fill others-dataset 1.0
   ]
 
-   foreach gis:feature-list-of salidas-peatones-dataset
+   foreach gis:feature-list-of exits-pedestrians-dataset
   [
     gis:set-drawing-color brown
-    gis:fill salidas-peatones-dataset 1.0
+    gis:fill exits-pedestrians-dataset 1.0
   ]
 
-  foreach gis:feature-list-of salidas-vehiculos-dataset
+  foreach gis:feature-list-of exits-cars-dataset
   [
     gis:set-drawing-color 125
-    gis:fill salidas-vehiculos-dataset 1.0
+    gis:fill exits-cars-dataset 1.0
   ]
-  foreach gis:feature-list-of entradas-vehiculos-dataset
+  foreach gis:feature-list-of entrances-cars-dataset
   [
     gis:set-drawing-color 105
-    gis:fill entradas-vehiculos-dataset 1.0
+    gis:fill entrances-cars-dataset 1.0
   ]
-  foreach gis:feature-list-of intersecciones-dataset
+  foreach gis:feature-list-of intersections-dataset
   [
     gis:set-drawing-color 9
-    gis:fill intersecciones-dataset 1.0
+    gis:fill intersections-dataset 1.0
   ]
- foreach gis:feature-list-of carriles-dataset
+ foreach gis:feature-list-of lanes-dataset
  [
    gis:set-drawing-color red
-   gis:fill carriles-dataset 1.0
+   gis:fill lanes-dataset 1.0
  ]
 end
 
-to intersecar-pacthes-con-poligonos
-  gis:apply-coverage propiedades-dataset "DESCRIPCIO" coverage
-  set propiedades-patchset patches with [coverage = "Propiedad"]
-  ask propiedades-patchset [
-    set descripcion "Propiedad"
+to intersect-patches-with-polygons
+  gis:apply-coverage properties-dataset "DESCRIPCIO" coverage
+  set properties-patchset patches with [coverage = "Propiedad"]
+  ask properties-patchset [
+    set description "Property"
   ]
-  gis:apply-coverage aceras-dataset "DESCRIPCIO" coverage
-  set aceras-patchset patches with [coverage = "Acera"]
-  ask aceras-patchset [
-    set descripcion "Acera"
+  gis:apply-coverage sidewalks-dataset "DESCRIPCIO" coverage
+  set sidewalks-patchset patches with [coverage = "Acera"]
+  ask sidewalks-patchset [
+    set description "Sidewalk"
   ]
-  gis:apply-coverage calles-dataset "DESCRIPCIO" coverage
-  set calles-patchset patches with [coverage = "Calle"]
-  ask calles-patchset [
-    set descripcion "Calle"
+  gis:apply-coverage streets-dataset "DESCRIPCIO" coverage
+  set streets-patchset patches with [coverage = "Calle"]
+  ask streets-patchset [
+    set description "Street"
   ]
-  gis:apply-coverage edificios-dataset "TIPO" coverage
-  set edificios-patchset patches with [coverage = "Edificio"]
-  ask edificios-patchset [
-    set descripcion "Edificio"
+  gis:apply-coverage buildings-dataset "TIPO" coverage
+  set buildings-patchset patches with [coverage = "Edificio"]
+  ask buildings-patchset [
+    set description "Building"
   ]
-  gis:apply-coverage parqueos-dataset "DESCRIPCIO" coverage
-  set parqueos-patchset patches with [coverage = "Parqueo"]
-  ask parqueos-patchset [
-    set descripcion "Parqueo"
+  gis:apply-coverage parkings-dataset "DESCRIPCIO" coverage
+  set parkings-patchset patches with [coverage = "Parqueo"]
+  ask parkings-patchset [
+    set description "Parking"
   ]
-  gis:apply-coverage parqueos-dataset "CAPACIDAD" ocupacion
-  gis:apply-coverage otros-dataset "TIPO" coverage
-  set otros-patchset patches with [coverage = "Otro"]
-  ask otros-patchset [
-    set descripcion "Otros"
+  gis:apply-coverage parkings-dataset "CAPACIDAD" occupation
+  gis:apply-coverage others-dataset "TIPO" coverage
+  set others-patchset patches with [coverage = "Otro"]
+  ask others-patchset [
+    set description "Other"
   ]
-  gis:apply-coverage salidas-peatones-dataset "TIPO" coverage
-  set salidas-peatones-patchset patches with [coverage = "SalidaPeaton"]
-  ask salidas-peatones-patchset [
-    set descripcion "SalidaPeaton"
+  gis:apply-coverage exits-pedestrians-dataset "TIPO" coverage
+  set exits-pedestrians-patchset patches with [coverage = "SalidaPeaton"]
+  ask exits-pedestrians-patchset [
+    set description "PedestrianExit"
   ]
-  gis:apply-coverage salidas-vehiculos-dataset "TIPO" coverage
-  set salidas-vehiculos-patchset patches with [coverage = "SalidaVehiculo"]
-  ask salidas-vehiculos-patchset [
-    set descripcion "SalidaVehiculo"
+  gis:apply-coverage exits-cars-dataset "TIPO" coverage
+  set exits-cars-patchset patches with [coverage = "SalidaVehiculo"]
+  ask exits-cars-patchset [
+    set description "CarExit"
   ]
-  gis:apply-coverage entradas-vehiculos-dataset "TIPO" coverage
-  set entradas-vehiculos-patchset patches with [coverage = "EntradaVehiculo"]
-  ask entradas-vehiculos-patchset [
-    set descripcion "EntradaVehiculo"
+  gis:apply-coverage entrances-cars-dataset "TIPO" coverage
+  set entrances-cars-patchset patches with [coverage = "EntradaVehiculo"]
+  ask entrances-cars-patchset [
+    set description "CarEntrace"
   ]
-  gis:apply-coverage carriles-dataset "TIPO" coverage
-  set carriles-patchset patches with [coverage = "Carril"]
-  ask carriles-patchset [
-    set descripcion "Carril"
+  gis:apply-coverage lanes-dataset "TIPO" coverage
+  set lanes-patchset patches with [coverage = "Carril"]
+  ask lanes-patchset [
+    set description "Lane"
   ]
 end
 
@@ -273,18 +274,20 @@ end
 ;;****************************************
 
 ;;------------------------
-;; Funciones de vehiculos:
+;; Funciones de cars:
 ;;------------------------
 
-to init-vehiculos
-  create-vehiculos grado-ocupacion-parqueos
+to init-cars
+  create-cars level-occupation-parking
   [
     set color one-of base-colors
     set shape "car"
     set size 1.5
+    set max-speed 0.5 + random-float 0.5
+    set speed 0.5
   ]
-  ask vehiculos[
-    if any? parqueos-patchset [move-to one-of calles-patchset]
+  ask cars[
+    if any? parkings-patchset [move-to one-of streets-patchset]
   ]
 end
 
@@ -293,7 +296,7 @@ to steer-without-lanes
   let rc 0
   let lc 0
   ;show "begin steer"
-  while [[descripcion] of patch-ahead 3  != "Calle"]
+  while [[description] of patch-ahead 3  != "Street"]
   [
     if rc >= 18 [stop]
     ;show "derecha"
@@ -302,7 +305,7 @@ to steer-without-lanes
   ]
   let right-heading heading
   set heading ohead
-  while [[descripcion] of patch-ahead 3 != "Calle"]
+  while [[description] of patch-ahead 3 != "Street"]
   [
     if lc >= 18 [stop]
     set lc lc + 1
@@ -316,13 +319,13 @@ end
 
 to steer
   let front-terrain patch-ahead 3
-  ifelse any? patches in-radius 2 with [gis:intersects? self carriles-dataset]
+  ifelse any? patches in-radius 2 with [gis:intersects? self lanes-dataset]
   [
-    ifelse [descripcion] of front-terrain != "Calle" and not gis:intersects? front-terrain carriles-dataset
+    ifelse [description] of front-terrain != "Street" and not gis:intersects? front-terrain lanes-dataset
     [
       lt 20
     ]
-    [if gis:intersects? front-terrain carriles-dataset
+    [if gis:intersects? front-terrain lanes-dataset
       [rt 20]
     ]
   ]
@@ -335,7 +338,7 @@ end
 
 to drive
 
-  if [descripcion] of patch-ahead 3 != "Calle" or gis:intersects? patch-ahead 3 carriles-dataset
+  if [description] of patch-ahead 3 != "Street" or gis:intersects? patch-ahead 3 lanes-dataset
   [
     ;show "before steer"
     ask self [steer]
@@ -348,27 +351,30 @@ end
 
 to check-for-intersection
   let patch-right patch-right-and-ahead 90 2
-  if gis:intersects? patch-right salidas-vehiculos-dataset
+  if gis:intersects? patch-right exits-cars-dataset
   [
     set heading towards patch-right
   ]
 end
 
-
+to speed-up-car
+  set speed (speed + acceleration)
+  if speed > max-speed [ set speed max-speed ]
+end
 ;;------------------------
-;; Funciones de peatones:
+;; Funciones de pedestrians:
 ;;------------------------
 
-to init-peatones
+to init-pedestrians
   ;cambiar variable
-  create-peatones grado-ocupacion-edificios
+  create-pedestrians level-occupation-buildings
   [
     set color white
     set shape "person"
     set size 0.75
   ]
-  ask peatones[
-    if any? edificios-patchset [move-to one-of edificios-patchset]
+  ask pedestrians[
+    if any? buildings-patchset [move-to one-of buildings-patchset]
   ]
 end
 
@@ -377,15 +383,15 @@ end
 ;; Funciones de salidas de vehículos:
 ;;------------------------
 ;;to init-vSalidas
- ;; let exit-patches patches with [gis:intersects? self salidas-vehiculos-dataset]
+ ;; let exit-patches patches with [gis:intersects? self salidas-cars-dataset]
  ;;  ask exit-patches [sprout-vSalidas 1]
 ;;end
 @#$#@#$#@
 GRAPHICS-WINDOW
-496
-94
-2514
-2113
+455
+10
+2473
+2029
 -1
 -1
 10.0
@@ -445,10 +451,10 @@ NIL
 SLIDER
 17
 10
-185
+202
 43
-grado-ocupacion-parqueos
-grado-ocupacion-parqueos
+level-occupation-parking
+level-occupation-parking
 1
 100
 54.0
@@ -460,10 +466,10 @@ HORIZONTAL
 SLIDER
 16
 48
-185
+194
 81
-grado-ocupacion-calle
-grado-ocupacion-calle
+level-occupation-street
+level-occupation-street
 0
 100
 51.0
@@ -475,10 +481,10 @@ HORIZONTAL
 SLIDER
 14
 84
-185
+212
 117
-grado-ocupacion-edificios
-grado-ocupacion-edificios
+level-occupation-buildings
+level-occupation-buildings
 100
 1500
 1100.0
@@ -492,8 +498,8 @@ SLIDER
 124
 186
 157
-desesperacion
-desesperacion
+despair
+despair
 0
 100
 50.0
@@ -503,10 +509,10 @@ NIL
 HORIZONTAL
 
 SWITCH
-202
-10
-371
-43
+41
+210
+210
+243
 entradas-habilitadas
 entradas-habilitadas
 1
@@ -516,13 +522,13 @@ entradas-habilitadas
 SLIDER
 13
 161
-185
-194
-aceleracion
-aceleracion
+246
+195
+acceleration
+acceleration
 0.001
 0.010
-0.001
+0.003
 0.001
 1
 NIL
