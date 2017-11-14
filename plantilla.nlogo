@@ -354,6 +354,7 @@ to check-for-intersection
   if any? patches in-radius 2 with [gis:intersects? self lanes-dataset]
   [
     let patch-right patch-right-and-ahead 90 1
+    if gis:intersects? patch-right intersections-dataset
     [
       set heading towards patch-right
     ]
