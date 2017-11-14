@@ -18,6 +18,8 @@ globals ;; Para definir las variables globales.
   salidas-peatones-dataset
   salidas-vehiculos-dataset
   entradas-vehiculos-dataset
+  intersecciones-dataset
+  carriles-dataset
 
   ;;Patches que intersecan a los poligonos
   aceras-patchset
@@ -29,6 +31,8 @@ globals ;; Para definir las variables globales.
   salidas-peatones-patchset
   salidas-vehiculos-patchset
   entradas-vehiculos-patchset
+  intersecciones-patchset
+  carriles-patchset
 ]
 
 turtles-own ;; Para definir los atributos de las tortugas.
@@ -43,11 +47,17 @@ patches-own ;; Para definir los atributos de las parcelas.
   ocupacion
 ]
 
-links-own ;; Para definir los atributos de los links o conexiones.
+vehiculos-own
 [
-
+  velocidad
+  aceleracion
 ]
 
+peatones-own
+[
+  velocidad
+  aceleracion
+]
 ;;********************
 ;; variables de breeds
 ;;********************
@@ -79,6 +89,8 @@ to setup ;; Para inicializar la simulación.
   set salidas-peatones-dataset gis:load-dataset "data/SALIDAS_P.shp"
   set salidas-vehiculos-dataset gis:load-dataset "data/SALIDAS_V.shp"
   set entradas-vehiculos-dataset gis:load-dataset "data/ENTRADAS_V.shp"
+  set intersecciones-dataset gis:load-dataset "data/INTERSECCIONES_CALLES.shp"
+  set carriles-dataset gis:load-dataset "data/CARRILES.shp"
 
   ;Crear el "mundo"
   gis:set-world-envelope (gis:envelope-union-of (gis:envelope-of aceras-dataset)
@@ -89,7 +101,9 @@ to setup ;; Para inicializar la simulación.
                                                 (gis:envelope-of propiedades-dataset)
                                                 (gis:envelope-of salidas-peatones-dataset)
                                                 (gis:envelope-of salidas-vehiculos-dataset)
-                                                (gis:envelope-of entradas-vehiculos-dataset))
+                                                (gis:envelope-of entradas-vehiculos-dataset)
+                                                (gis:envelope-of intersecciones-dataset)
+                                                (gis:envelope-of carriles-dataset))
   foreach gis:feature-list-of propiedades-dataset
   [
     gis:set-drawing-color green
@@ -142,8 +156,19 @@ to setup ;; Para inicializar la simulación.
     gis:set-drawing-color 105
     gis:fill entradas-vehiculos-dataset 1.0
   ]
+  foreach gis:feature-list-of intersecciones-dataset
+  [
+    gis:set-drawing-color 9
+    gis:fill intersecciones-dataset 1.0
+  ]
+  foreach gis:feature-list-of carriles-dataset
+  [
+    gis:set-drawing-color red
+    gis:fill carriles-dataset 1.0
+  ]
 
-  ;gis:apply-coverage calles-dataset "DESCRIPCIO" descripcion
+
+
 
   init-globals ;; Para inicializar variables globales.
   intersecar-pacthes-con-poligonos
@@ -154,7 +179,6 @@ to setup ;; Para inicializar la simulación.
   ]
   init-peatones
   init-vehiculos
-
   reset-ticks  ;; Para inicializar el contador de ticks.
 end
 
@@ -222,7 +246,11 @@ to intersecar-pacthes-con-poligonos
   ask entradas-vehiculos-patchset [
     set descripcion "EntradaVehiculo"
   ]
-
+  gis:apply-coverage carriles-dataset "TIPO" coverage
+  set carriles-patchset patches with [coverage = "Carril"]
+  ask carriles-patchset [
+    set descripcion "Carril"
+  ]
 end
 
 
@@ -269,7 +297,7 @@ end
 to init-vehiculos
   create-vehiculos grado-ocupacion-parqueos
   [
-    set color yellow
+    set color one-of base-colors
     set shape "car"
     set size 1.5
   ]
