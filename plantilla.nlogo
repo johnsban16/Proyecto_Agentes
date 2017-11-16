@@ -77,7 +77,7 @@ end
 to setup ;; Para inicializar la simulación.
   ca           ;; Equivale a clear-ticks + clear-turtles + clear-patches +
                ;; clear-drawing + clear-all-plots + clear-output.
-  set-patch-size 10
+  set-patch-size 12
   ;Cargar las coordenadas de los shapefiles
   setup-geo-data
   init-globals ;; Para inicializar variables globales.
@@ -95,6 +95,7 @@ end
 to go ;; Para ejecutar la simulación.
     ;profiler:start
   ask cars [drive]
+  ask pedestrians[walk]
   tick
   actualizar-salidas
   if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
@@ -110,6 +111,11 @@ end
 
 to actualizar-salidas ;; Para actualizar todas las salidas del modelo.
 end
+
+
+;;*******************************************************************************************************
+;; Funciones espaciales
+;;*******************************************************************************************************
 
 to setup-geo-data
   set sidewalks-dataset gis:load-dataset "data/ACERAS_RodrigoFacio.shp"
@@ -256,9 +262,9 @@ end
 
 
 
-;;**********************
+;;*******************************************************************************************************
 ;; Funciones de patches:
-;;**********************
+;;*******************************************************************************************************
 
 to init-patch ;; Para inicializar una parcela a la vez.
 
@@ -269,9 +275,9 @@ to p-comportamiento-patch ;; Cambiar por nombre significativo de comportamiento 
 end
 
 
-;;****************************************
+;;*******************************************************************************************************
 ;; Funciones de breeds:
-;;****************************************
+;;*******************************************************************************************************
 
 ;;------------------------
 ;; Funciones de cars:
@@ -290,6 +296,40 @@ to init-cars
     if any? parkings-patchset [move-to one-of streets-patchset]
   ]
 end
+
+
+to drive
+
+  if [description] of patch-ahead 3 != "Street" or gis:intersects? patch-ahead 3 lanes-dataset
+  [
+    ;show "before steer"
+    ask self [steer]
+  ]
+
+  ask self [check-for-intersection]
+  ;if
+  ask self [move-forward]
+end
+
+
+to steer
+  let front-terrain patch-ahead 3
+  ifelse any? patches in-radius 2 with [gis:intersects? self lanes-dataset]
+  [
+    ifelse [description] of front-terrain != "Street" and not gis:intersects? front-terrain lanes-dataset
+    [
+      lt 20
+    ]
+    [if gis:intersects? front-terrain lanes-dataset
+      [rt 20]
+    ]
+  ]
+  [
+    ask self [steer-without-lanes]
+  ]
+end
+
+
 
 to steer-without-lanes
   let ohead heading
@@ -311,44 +351,32 @@ to steer-without-lanes
     set lc lc + 1
     lt 20
   ]
-  ;if rc = 18 or lc = 18 [die]
   if rc < lc
   [ set heading right-heading]
 
 end
 
-to steer
-  let front-terrain patch-ahead 3
-  ifelse any? patches in-radius 2 with [gis:intersects? self lanes-dataset]
-  [
-    ifelse [description] of front-terrain != "Street" and not gis:intersects? front-terrain lanes-dataset
-    [
-      lt 20
-    ]
-    [if gis:intersects? front-terrain lanes-dataset
-      [rt 20]
-    ]
+to move-forward ; turtle procedure
+  speed-up-car ; we tentatively speed up, but might have to slow down
+  let blocking-cars other cars in-cone (1 + speed) 50
+  let blocking-car min-one-of blocking-cars [ distance myself ]
+  if blocking-car != nobody [
+    ; match the speed of the car ahead of you and then slow
+    ; down so you are driving a bit slower than that car.
+   set speed [ speed ] of blocking-car
+   slow-down-car
   ]
-  [
-    ask self [steer-without-lanes]
-  ]
-
-
+  forward speed
 end
 
-to drive
-
-  if [description] of patch-ahead 3 != "Street" or gis:intersects? patch-ahead 3 lanes-dataset
-  [
-    ;show "before steer"
-    ask self [steer]
-  ]
-
-  ask self [check-for-intersection]
-  ;if
-  fd 1
+to slow-down-car ; turtle procedure
+  set speed (speed - deceleration)
 end
 
+to speed-up-car
+  set speed (speed + acceleration)
+  if speed > max-speed [ set speed max-speed ]
+end
 
 to check-for-intersection
   if any? patches in-radius 2 with [gis:intersects? self lanes-dataset]
@@ -378,16 +406,13 @@ to check-if-exits
   ]
 end
 
-to speed-up-car
-  set speed (speed + acceleration)
-  if speed > max-speed [ set speed max-speed ]
-end
+
 ;;------------------------
 ;; Funciones de pedestrians:
 ;;------------------------
 
 to init-pedestrians
-  ;cambiar variable
+  ;cambiar variabl e
   create-pedestrians level-occupation-buildings
   [
     set color white
@@ -396,6 +421,28 @@ to init-pedestrians
   ]
   ask pedestrians[
     if any? buildings-patchset [move-to one-of buildings-patchset]
+  ]
+  ask pedestrians [set-evacuation-path]
+
+end
+
+to set-evacuation-path
+  let possible-exits other patches with [(description = "CarExit" or description = "PedestrianExit") and distance myself > 0]
+  let nearest-exit min-one-of possible-exits [distance myself]
+  set heading towards nearest-exit
+end
+
+to walk
+  ifelse ticks = 1
+  [ ]
+  ;if
+  [fd 0.09 ]
+end
+
+to check-if-pedestrian-exit
+  if [description] of patch-here = "CarExit" or [description] of patch-here = "PedestrianExit"
+  [
+    die
   ]
 end
 
@@ -411,11 +458,11 @@ end
 GRAPHICS-WINDOW
 455
 10
-2473
-2029
+2875
+2431
 -1
 -1
-10.0
+12.0
 1
 10
 1
@@ -523,17 +570,17 @@ despair
 despair
 0
 100
-50.0
+44.0
 1
 1
 NIL
 HORIZONTAL
 
 SWITCH
-41
-210
-210
-243
+16
+266
+185
+299
 entradas-habilitadas
 entradas-habilitadas
 1
@@ -548,9 +595,24 @@ SLIDER
 acceleration
 acceleration
 0.001
-0.010
-0.003
+0.01
+0.004
 0.001
+1
+NIL
+HORIZONTAL
+
+SLIDER
+13
+203
+239
+236
+deceleration
+deceleration
+0.01
+0.1
+0.06
+0.01
 1
 NIL
 HORIZONTAL
