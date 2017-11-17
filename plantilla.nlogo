@@ -7,6 +7,7 @@ breed [cars car]
 breed [pedestrians pedestrian]
 ;;breed [vSalidas vSalida]
 breed [pSalidas pSalida]
+breed [exitParkings exitParking]
 
 
 globals ;; Para definir las variables globales.
@@ -19,6 +20,7 @@ globals ;; Para definir las variables globales.
   properties-dataset
   exits-pedestrians-dataset
   exits-cars-dataset
+  exits-parkings-dataset
   entrances-cars-dataset
   intersections-dataset
   lanes-dataset
@@ -32,6 +34,7 @@ globals ;; Para definir las variables globales.
   parkings-patchset
   exits-pedestrians-patchset
   exits-cars-patchset
+  exits-parkings-patchset
   entrances-cars-patchset
   intersections-patchset
   lanes-patchset
@@ -59,8 +62,13 @@ cars-own
 
 pedestrians-own
 [
+  speed
 ]
 
+exitParkings-own
+[
+  occupationParking
+]
 
 ;;**************************************
 ;; INICIALIZACIÓN DE VARIABLES GLOBALES:
@@ -81,14 +89,16 @@ to setup ;; Para inicializar la simulación.
   ;Cargar las coordenadas de los shapefiles
   setup-geo-data
   init-globals ;; Para inicializar variables globales.
-  intersect-patches-with-polygons
+  intersect-patches-with-polygons ;; Le asigna los atributos de los poligonos a las tortugas
+  init-parking-exits ;; Crea las salidas de los parqueos
+  check-if-sprout
   ;; Para crear tortugas e inicializar tortugas y parcelas además.
   ask patches
   [
     init-patch
   ]
   init-pedestrians
-  init-cars
+  ;init-cars
   reset-ticks  ;; Para inicializar el contador de ticks.
 end
 
@@ -97,7 +107,6 @@ to go ;; Para ejecutar la simulación.
   ask cars [drive]
   ask pedestrians[walk]
   tick
-  actualizar-salidas
   if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
     [stop]
  ; profiler:stop
@@ -108,8 +117,12 @@ end
 ;;*******************************
 ;; Otras funciones globales:
 ;;*******************************
-
-to actualizar-salidas ;; Para actualizar todas las salidas del modelo.
+to-report random-rayleigh [ p ]
+  if p > 0
+  [
+    let u random-float 1
+    report p * sqrt (-2 * log u e )
+  ]
 end
 
 
@@ -126,6 +139,7 @@ to setup-geo-data
   set properties-dataset gis:load-dataset "data/PROPIEDADES_RodrigoFacio.shp"
   set exits-pedestrians-dataset gis:load-dataset "data/SALIDAS_P.shp"
   set exits-cars-dataset gis:load-dataset "data/SALIDAS_V.shp"
+  set exits-parkings-dataset gis:load-dataset "data/SALIDAS_PARQUEOS.shp"
   set entrances-cars-dataset gis:load-dataset "data/ENTRADAS_V.shp"
   set intersections-dataset gis:load-dataset "data/INTERSECCIONES_CALLES.shp"
   set lanes-dataset gis:load-dataset "data/CARRILES.shp"
@@ -138,6 +152,7 @@ to setup-geo-data
                                                 (gis:envelope-of parkings-dataset)
                                                 (gis:envelope-of properties-dataset)
                                                 (gis:envelope-of exits-pedestrians-dataset)
+                                                (gis:envelope-of exits-parkings-dataset)
                                                 (gis:envelope-of exits-cars-dataset)
                                                 (gis:envelope-of entrances-cars-dataset)
                                                 (gis:envelope-of intersections-dataset)
@@ -204,6 +219,11 @@ to setup-geo-data
    gis:set-drawing-color red
    gis:fill lanes-dataset 1.0
  ]
+ ;foreach gis:feature-list-of exits-parkings-dataset
+ ;[
+ ;  gis:set-drawing-color yellow
+ ;  gis:fill exits-parkings-dataset 1.0
+ ;]
 end
 
 to intersect-patches-with-polygons
@@ -278,15 +298,48 @@ end
 ;;*******************************************************************************************************
 ;; Funciones de breeds:
 ;;*******************************************************************************************************
+;;---------------------------
+;; Funciones de exitParkings:
+;;---------------------------
+to init-parking-exits
+  let parkings-exits-patches patches with [gis:intersects? self exits-parkings-dataset]
+  ask parkings-exits-patches
+  [
+    sprout-exitParkings 1
+    [
+      let closest-parking patches in-radius 3 with [description = "Parking"]
+      set occupationParking [occupation] of one-of closest-parking * percentage-occupation-parking
+      hide-turtle
+    ]
+  ]
+end
+
+to check-if-sprout
+  ask exitParkings[
+    hatch-cars 1
+    [
+      show-turtle ;los hijos heredan los atributos del padre, por lo que se debe reestablecer el valor de hidden
+      set color one-of remove gray base-colors
+      set shape "car"
+      set size 1.5
+      set max-speed 0.5 + random-float 0.5
+      set speed 0.5
+    ]
+   set occupationParking occupationParking - 1
+  ]
+
+end
+
+
 
 ;;------------------------
 ;; Funciones de cars:
 ;;------------------------
 
 to init-cars
-  create-cars level-occupation-parking
+  create-cars occupation-street
   [
-    set color one-of base-colors
+    set color one-of remove gray base-colors
     set shape "car"
     set size 1.5
     set max-speed 0.5 + random-float 0.5
@@ -413,7 +466,7 @@ end
 
 to init-pedestrians
   ;cambiar variabl e
-  create-pedestrians level-occupation-buildings
+  create-pedestrians occupation-buildings
   [
     set color white
     set shape "person"
@@ -519,14 +572,14 @@ NIL
 SLIDER
 17
 10
-202
+240
 43
-level-occupation-parking
-level-occupation-parking
+percentage-occupation-parking
+percentage-occupation-parking
+0.1
 1
-100
-54.0
-1
+0.5
+0.1
 1
 NIL
 HORIZONTAL
@@ -536,8 +589,8 @@ SLIDER
 48
 194
 81
-level-occupation-street
-level-occupation-street
+occupation-street
+occupation-street
 0
 100
 51.0
@@ -551,8 +604,8 @@ SLIDER
 84
 212
 117
-level-occupation-buildings
-level-occupation-buildings
+occupation-buildings
+occupation-buildings
 100
 1500
 1100.0
@@ -566,11 +619,11 @@ SLIDER
 124
 186
 157
-despair
-despair
-0
-100
-44.0
+desesperation
+desesperation
+1
+60
+30.0
 1
 1
 NIL
@@ -1019,7 +1072,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.2
+NetLogo 6.0.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
