@@ -91,7 +91,6 @@ to setup ;; Para inicializar la simulación.
   init-globals ;; Para inicializar variables globales.
   intersect-patches-with-polygons ;; Le asigna los atributos de los poligonos a las tortugas
   init-parking-exits ;; Crea las salidas de los parqueos
-  check-if-sprout
   ;; Para crear tortugas e inicializar tortugas y parcelas además.
   ask patches
   [
@@ -104,10 +103,14 @@ end
 
 to go ;; Para ejecutar la simulación.
     ;profiler:start
+  if(ticks mod 60 = 0)
+  [
+    check-if-sprout
+  ]
   ask cars [drive]
   ask pedestrians[walk]
   tick
-  if ticks >= 3000  ;; En caso de que la simulación esté controlada por cantidad de ticks.
+  if ticks >= 3600  ;; En caso de que la simulación esté controlada por cantidad de ticks.
     [stop]
  ; profiler:stop
  ; print profiler:report  ;; view the results
@@ -315,19 +318,23 @@ to init-parking-exits
 end
 
 to check-if-sprout
-  let inverse 60 + 1
-  ask exitParkings[
-    let prob random-rayleigh inverse - desesperation
-    hatch-cars 1
+  ask exitParkings
+  [
+    let prob random-rayleigh (desesperation)
+    show prob
+    if prob > random-float 100 and occupationParking > 0
     [
-      show-turtle ;los hijos heredan los atributos del padre, por lo que se debe reestablecer el valor de hidden
-      set color one-of remove gray base-colors
-      set shape "car"
-      set size 1.5
-      set max-speed 0.5 + random-float 0.5
-      set speed 0.5
+      hatch-cars 1
+      [
+        show-turtle ;los hijos heredan los atributos del padre, por lo que se debe reestablecer el valor de hidden
+        set color one-of remove gray base-colors
+        set shape "car"
+        set size 1.5
+        set max-speed 0.5 + random-float 0.5
+        set speed 0.5
+      ]
+      set occupationParking occupationParking - 1
     ]
-   set occupationParking occupationParking - 1
   ]
 
 end
@@ -610,7 +617,7 @@ occupation-buildings
 occupation-buildings
 100
 1500
-1100.0
+100.0
 100
 1
 NIL
