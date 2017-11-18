@@ -315,7 +315,9 @@ to init-parking-exits
 end
 
 to check-if-sprout
+  let inverse 60 + 1
   ask exitParkings[
+    let prob random-rayleigh inverse - desesperation
     hatch-cars 1
     [
       show-turtle ;los hijos heredan los atributos del padre, por lo que se debe reestablecer el valor de hidden
