@@ -58,11 +58,14 @@ cars-own
 [
   speed
   max-speed
+  selected-exit
 ]
 
 pedestrians-own
 [
   speed
+  first-exit
+  campus-exit
 ]
 
 exitParkings-own
@@ -97,24 +100,20 @@ to setup ;; Para inicializar la simulación.
     init-patch
   ]
   init-pedestrians
-  ;init-cars
+  init-cars
   reset-ticks  ;; Para inicializar el contador de ticks.
 end
 
 to go ;; Para ejecutar la simulación.
-    ;profiler:start
   if(ticks mod 60 = 0)
   [
-    check-if-sprout
+    check-if-hatch
   ]
   ask cars [drive]
-  ask pedestrians[walk]
+   ask pedestrians[walk check-if-pedestrian-exit]
   tick
   if ticks >= 3600  ;; En caso de que la simulación esté controlada por cantidad de ticks.
     [stop]
- ; profiler:stop
- ; print profiler:report  ;; view the results
- ; profiler:reset         ;; clear the data
 end
 
 ;;*******************************
@@ -317,12 +316,13 @@ to init-parking-exits
   ]
 end
 
-to check-if-sprout
+to check-if-hatch
   ask exitParkings
   [
     let prob random-rayleigh (desesperation)
-    show prob
-    if prob > random-float 100 and occupationParking > 0
+    ;show prob
+
+    if prob > random-float 100 and occupationParking > 0 and not any? cars in-radius 5
     [
       hatch-cars 1
       [
@@ -331,7 +331,10 @@ to check-if-sprout
         set shape "car"
         set size 1.5
         set max-speed 0.5 + random-float 0.5
-        set speed 0.5
+        set speed 0.3
+        set selected-exit false
+        ask self [check-for-exit-near-parking]
+
       ]
       set occupationParking occupationParking - 1
     ]
@@ -352,10 +355,13 @@ to init-cars
     set shape "car"
     set size 1.5
     set max-speed 0.5 + random-float 0.5
-    set speed 0.5
+    set speed 0.3
+    set selected-exit false
+    ask self [check-for-exit-near-parking]
+
   ]
   ask cars[
-    if any? parkings-patchset [move-to one-of streets-patchset]
+    if any? streets-patchset [move-to one-of streets-patchset]
   ]
 end
 
@@ -365,11 +371,13 @@ to drive
   if [description] of patch-ahead 3 != "Street" or gis:intersects? patch-ahead 3 lanes-dataset
   [
     ;show "before steer"
-    ask self [steer]
+
+    if selected-exit = false [ask self [steer]]
   ]
 
   ask self [check-for-intersection]
-  ;if
+  ask self [check-for-exit]
+  ask self [check-if-exits]
   ask self [move-forward]
 end
 
@@ -397,11 +405,9 @@ to steer-without-lanes
   let ohead heading
   let rc 0
   let lc 0
-  ;show "begin steer"
   while [[description] of patch-ahead 3  != "Street"]
   [
     if rc >= 18 [stop]
-    ;show "derecha"
     set rc rc + 1
     rt 20
   ]
@@ -418,21 +424,27 @@ to steer-without-lanes
 
 end
 
-to move-forward ; turtle procedure
-  speed-up-car ; we tentatively speed up, but might have to slow down
-  let blocking-cars other cars in-cone (1 + speed) 50
+to move-forward
+  speed-up-car
+  let blocking-cars other cars in-cone (3 + speed) 50
   let blocking-car min-one-of blocking-cars [ distance myself ]
   if blocking-car != nobody [
-    ; match the speed of the car ahead of you and then slow
-    ; down so you are driving a bit slower than that car.
    set speed [ speed ] of blocking-car
    slow-down-car
+  ]
+  let blocking-pedestrians pedestrians in-cone (2 + speed) 90
+  if any? blocking-pedestrians
+  [
+    set speed 0
   ]
   forward speed
 end
 
+
 to slow-down-car ; turtle procedure
-  set speed (speed - deceleration)
+  let slow-speed (speed - deceleration)
+  ifelse slow-speed >= 0
+  [set speed slow-speed][set speed 0.01]
 end
 
 to speed-up-car
@@ -444,26 +456,38 @@ to check-for-intersection
   if any? patches in-radius 2 with [gis:intersects? self lanes-dataset]
   [
     let patch-right patch-right-and-ahead 90 1
-    if gis:intersects? patch-right intersections-dataset
+    if gis:intersects? patch-right intersections-dataset or [description] of patch-right = "CarExit"
     [
       set heading towards patch-right
     ]
   ]
 end
 
+to check-for-exit-near-parking
+  let near-patches other patches in-radius 5 with [description = "CarExit"]
+  if any? near-patches
+  [
+    let exit one-of near-patches
+    set heading towards exit
+    set selected-exit true
+  ]
+
+
+end
 to check-for-exit
   let exit one-of patches in-cone 5 90 with [gis:intersects? self exits-cars-dataset]
   if exit = patch-here [set exit nobody]
   if exit != nobody
   [
     set heading towards exit
+    set selected-exit true
   ]
 end
 
 to check-if-exits
   if gis:intersects? patch-here  exits-cars-dataset
   [
-     show "sale"
+     ;show "sale"
      die
   ]
 end
@@ -474,13 +498,14 @@ end
 ;;------------------------
 
 to init-pedestrians
-  ;cambiar variabl e
   create-pedestrians occupation-buildings
   [
     set color white
     set shape "person"
     set size 0.75
+    set speed 0.05
   ]
+
   ask pedestrians[
     if any? buildings-patchset [move-to one-of buildings-patchset]
   ]
@@ -489,24 +514,50 @@ to init-pedestrians
 end
 
 to set-evacuation-path
-  let possible-exits other patches with [(description = "CarExit" or description = "PedestrianExit") and distance myself > 0]
-  let nearest-exit min-one-of possible-exits [distance myself]
-  set heading towards nearest-exit
+  set first-exit set-first-exit self
+  set heading towards first-exit
+  set campus-exit set-campus-exit first-exit
+  set heading towards campus-exit
+end
+
+
+to-report set-first-exit[ c ]
+   let first-exits other patches with [(description = "PedestrianExit" or description = "CarExit" or description = "CarEntrance" or description = "Street") and distance c > 0]
+   let fe min-one-of first-exits [distance c]
+   report fe
+end
+
+to-report set-campus-exit[p]
+  let campus-exits other patches with [(description = "PedestrianExit" or description = "CarExit" or description = "CarEntrance")]
+  let ce min-one-of campus-exits [distance p]
+  report ce
 end
 
 to walk
-  ifelse ticks = 1
-  [ ]
-  ;if
-  [fd 0.09 ]
+  let ohead heading
+  ask self [check-if-pedestrian-steer]
+  fd speed
+  ;if not any? cars-on patch-ahead 1 [fd speed]
+  set heading ohead
+end
+
+
+to check-if-pedestrian-steer
+  if any? cars-on patch-ahead 1
+  [lt 90]
+  if any? cars-on patch-right-and-ahead 20 1
+  [lt 90]
+  if any? cars-on patch-right-and-ahead 20 1
+  [rt 90]
 end
 
 to check-if-pedestrian-exit
-  if [description] of patch-here = "CarExit" or [description] of patch-here = "PedestrianExit"
+  if [description] of patch-here = "CarExit" or [description] of patch-here = "PedestrianExit" or  [description] of patch-here = 0
   [
     die
   ]
 end
+
 
 
 ;;------------------------
@@ -602,7 +653,7 @@ occupation-street
 occupation-street
 0
 100
-51.0
+100.0
 1
 1
 NIL
@@ -615,10 +666,10 @@ SLIDER
 117
 occupation-buildings
 occupation-buildings
-100
-1500
-100.0
-100
+0
+10000
+2000.0
+500
 1
 NIL
 HORIZONTAL
@@ -673,7 +724,7 @@ deceleration
 deceleration
 0.01
 0.1
-0.06
+0.01
 0.01
 1
 NIL
@@ -1081,7 +1132,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.1
+NetLogo 6.0.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
