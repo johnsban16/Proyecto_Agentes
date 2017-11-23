@@ -38,6 +38,10 @@ globals ;; Para definir las variables globales.
   entrances-cars-patchset
   intersections-patchset
   lanes-patchset
+
+  ;;Variables de velocidad
+  car-speed
+  pedestrian-speed
 ]
 turtles-own ;; Para definir los atributos de las tortugas.
 []
@@ -78,7 +82,8 @@ exitParkings-own
 ;;**************************************
 
 to init-globals ;; Para darle valor inicial a las variables globales.
-
+  set car-speed 0.3
+  set pedestrian-speed 0.047
 end
 
 ;;**********************
@@ -89,6 +94,7 @@ to setup ;; Para inicializar la simulación.
   ca           ;; Equivale a clear-ticks + clear-turtles + clear-patches +
                ;; clear-drawing + clear-all-plots + clear-output.
   set-patch-size 12
+  init-globals
   ;Cargar las coordenadas de los shapefiles
   setup-geo-data
   init-globals ;; Para inicializar variables globales.
@@ -322,7 +328,7 @@ to check-if-hatch
     let prob random-rayleigh (desesperation)
     ;show prob
 
-    if prob > random-float 100 and occupationParking > 0 and not any? cars in-radius 5
+    if prob > random-float 100 and occupationParking > 0 and not any? cars in-radius 5 and not any? pedestrians in-radius 1
     [
       hatch-cars 1
       [
@@ -330,8 +336,8 @@ to check-if-hatch
         set color one-of remove gray base-colors
         set shape "car"
         set size 1.5
-        set max-speed 0.5 + random-float 0.5
-        set speed 0.3
+        set max-speed 0.3 + random-float 0.5
+        set speed car-speed
         set selected-exit false
         ask self [check-for-exit-near-parking]
 
@@ -355,23 +361,21 @@ to init-cars
     set shape "car"
     set size 1.5
     set max-speed 0.5 + random-float 0.5
-    set speed 0.3
+    set speed car-speed
     set selected-exit false
     ask self [check-for-exit-near-parking]
 
   ]
   ask cars[
-    if any? streets-patchset [move-to one-of streets-patchset]
+    if any? streets-patchset [move-to one-of streets-patchset with [not any? cars in-radius 2]]
   ]
 end
 
 
 to drive
 
-  if [description] of patch-ahead 3 != "Street" or gis:intersects? patch-ahead 3 lanes-dataset
+  if patch-ahead 3 != nobody and ([description] of patch-ahead 3 != "Street" or gis:intersects? patch-ahead 3 lanes-dataset)
   [
-    ;show "before steer"
-
     if selected-exit = false [ask self [steer]]
   ]
 
@@ -432,7 +436,7 @@ to move-forward
    set speed [ speed ] of blocking-car
    slow-down-car
   ]
-  let blocking-pedestrians pedestrians in-cone (2 + speed) 90
+  let blocking-pedestrians pedestrians in-cone (2 + speed) 45
   if any? blocking-pedestrians
   [
     set speed 0
@@ -441,7 +445,7 @@ to move-forward
 end
 
 
-to slow-down-car ; turtle procedure
+to slow-down-car
   let slow-speed (speed - deceleration)
   ifelse slow-speed >= 0
   [set speed slow-speed][set speed 0.01]
@@ -464,18 +468,33 @@ to check-for-intersection
 end
 
 to check-for-exit-near-parking
-  let near-patches other patches in-radius 5 with [description = "CarExit"]
+  let near-patches nobody
+  ifelse entrances-are-exits
+  [
+    set near-patches other patches in-radius 5 with [description = "CarExit" or description = "CarEntrance"]
+  ]
+  [
+    set near-patches other patches in-radius 5 with [description = "CarExit"]
+  ]
   if any? near-patches
   [
     let exit one-of near-patches
     set heading towards exit
     set selected-exit true
   ]
-
-
 end
+
 to check-for-exit
-  let exit one-of patches in-cone 5 90 with [gis:intersects? self exits-cars-dataset]
+  let exit nobody
+  ifelse entrances-are-exits
+  [
+    set exit one-of patches in-cone 5 90 with [description = "CarExit" or description = "CarEntrance" ]
+  ]
+  [
+    set exit one-of patches in-cone 5 90 with [description = "CarExit"]
+  ]
+
+  ;let exit  one-of patches in-cone 5 90 with [gis:intersects? self exits-cars-dataset]
   if exit = patch-here [set exit nobody]
   if exit != nobody
   [
@@ -503,13 +522,13 @@ to init-pedestrians
     set color white
     set shape "person"
     set size 0.75
-    set speed 0.05
+    set speed pedestrian-speed
   ]
 
   ask pedestrians[
     if any? buildings-patchset [move-to one-of buildings-patchset]
   ]
-  ask pedestrians [set-evacuation-path]
+  ask pedestrians [set-evacuation-path2]
 
 end
 
@@ -520,6 +539,20 @@ to set-evacuation-path
   set heading towards campus-exit
 end
 
+to set-evacuation-path2
+  let exits nobody
+  let sel-exit nobody
+  ifelse any? patches with[description = "PedestrianExit"] in-radius 15
+  [
+     set exits other patches with [(description = "PedestrianExit") and distance myself > 0]
+     set sel-exit min-one-of exits [distance myself]
+  ]
+  [
+    set exits other patches with [(description = "PedestrianExit" or description = "CarExit" or description = "CarEntrance") and distance myself > 0]
+    set sel-exit min-one-of exits [distance myself]
+  ]
+  if sel-exit !=  nobody [set heading towards sel-exit]
+end
 
 to-report set-first-exit[ c ]
    let first-exits other patches with [(description = "PedestrianExit" or description = "CarExit" or description = "CarEntrance" or description = "Street") and distance c > 0]
@@ -536,14 +569,20 @@ end
 to walk
   let ohead heading
   ask self [check-if-pedestrian-steer]
-  fd speed
+   move-forward-pedestrian
   ;if not any? cars-on patch-ahead 1 [fd speed]
   set heading ohead
 end
 
+to move-forward-pedestrian
+  ;ifelse any? cars in-cone 2 90
+  ;[set speed speed - 0.02]
+  ;[set speed 0.05]
+  fd speed
+end
 
 to check-if-pedestrian-steer
-  if any? cars-on patch-ahead 1
+  if any? cars-on patch-ahead 1 or any? cars-on patch-ahead 2
   [lt 90]
   if any? cars-on patch-right-and-ahead 20 1
   [lt 90]
@@ -638,7 +677,7 @@ percentage-occupation-parking
 percentage-occupation-parking
 0.1
 1
-0.5
+0.3
 0.1
 1
 NIL
@@ -653,7 +692,7 @@ occupation-street
 occupation-street
 0
 100
-100.0
+57.0
 1
 1
 NIL
@@ -694,8 +733,8 @@ SWITCH
 266
 185
 299
-entradas-habilitadas
-entradas-habilitadas
+entrances-are-exits
+entrances-are-exits
 1
 1
 -1000
