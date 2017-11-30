@@ -8,6 +8,7 @@ breed [pedestrians pedestrian]
 ;;breed [vSalidas vSalida]
 breed [pSalidas pSalida]
 breed [exitParkings exitParking]
+breed [congestion-detectors congestion-detector]
 
 
 globals ;; Para definir las variables globales.
@@ -24,6 +25,7 @@ globals ;; Para definir las variables globales.
   entrances-cars-dataset
   intersections-dataset
   lanes-dataset
+  congestion-detectors-dataset
 
   ;;Patches que intersecan a los poligonos
   sidewalks-patchset
@@ -38,6 +40,7 @@ globals ;; Para definir las variables globales.
   entrances-cars-patchset
   intersections-patchset
   lanes-patchset
+  congestion-detectors-patchset
 
   ;;Variables de velocidad
   car-speed
@@ -100,6 +103,7 @@ to setup ;; Para inicializar la simulación.
   init-globals ;; Para inicializar variables globales.
   intersect-patches-with-polygons ;; Le asigna los atributos de los poligonos a las tortugas
   init-parking-exits ;; Crea las salidas de los parqueos
+  init-congestion-detectors
   ;; Para crear tortugas e inicializar tortugas y parcelas además.
   ask patches
   [
@@ -151,6 +155,7 @@ to setup-geo-data
   set entrances-cars-dataset gis:load-dataset "data/ENTRADAS_V.shp"
   set intersections-dataset gis:load-dataset "data/INTERSECCIONES_CALLES.shp"
   set lanes-dataset gis:load-dataset "data/CARRILES.shp"
+  set congestion-detectors-dataset gis:load-dataset "data/CONGESTIONES.shp"
 
   ;Crear el "mundo"
   gis:set-world-envelope (gis:envelope-union-of (gis:envelope-of sidewalks-dataset)
@@ -164,7 +169,8 @@ to setup-geo-data
                                                 (gis:envelope-of exits-cars-dataset)
                                                 (gis:envelope-of entrances-cars-dataset)
                                                 (gis:envelope-of intersections-dataset)
-                                                (gis:envelope-of lanes-dataset))
+                                                (gis:envelope-of lanes-dataset)
+                                                (gis:envelope-of congestion-detectors-dataset))
   foreach gis:feature-list-of properties-dataset
   [
     gis:set-drawing-color green
@@ -224,8 +230,13 @@ to setup-geo-data
   ]
  foreach gis:feature-list-of lanes-dataset
  [
-   gis:set-drawing-color red
+   gis:set-drawing-color green
    gis:fill lanes-dataset 1.0
+ ]
+  foreach gis:feature-list-of congestion-detectors-dataset
+ [
+   gis:set-drawing-color yellow
+   gis:fill congestion-detectors-dataset 1.0
  ]
  ;foreach gis:feature-list-of exits-parkings-dataset
  ;[
@@ -348,7 +359,17 @@ to check-if-hatch
 
 end
 
-
+;Detection-congestion
+to init-congestion-detectors
+  let congestion-detectors-points patches with [gis:intersects? self congestion-detectors-dataset]
+  ask congestion-detectors-points
+  [
+    sprout-congestion-detectors 1
+    [
+      ;hide-turtle
+    ]
+  ]
+end
 
 ;;------------------------
 ;; Funciones de cars:
@@ -1171,7 +1192,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.2
+NetLogo 6.0.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
