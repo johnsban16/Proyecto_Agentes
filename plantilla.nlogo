@@ -45,6 +45,10 @@ globals ;; Para definir las variables globales.
   ;;Variables de velocidad
   car-speed
   pedestrian-speed
+
+  ;;Variables para experimentis
+  num-car-exit ;numero de vehiculos que han salido
+  cars-left ;; numero de vehiculos que no lograron salir antes de cierto tiempo
 ]
 turtles-own ;; Para definir los atributos de las tortugas.
 []
@@ -85,8 +89,10 @@ exitParkings-own
 ;;**************************************
 
 to init-globals ;; Para darle valor inicial a las variables globales.
-  set car-speed 0.3
-  set pedestrian-speed 0.047
+  set car-speed 3.332
+  set pedestrian-speed 0.532
+  set num-car-exit 0
+  set cars-left 0
 end
 
 ;;**********************
@@ -94,9 +100,10 @@ end
 ;;**********************
 
 to setup ;; Para inicializar la simulación.
-  ca           ;; Equivale a clear-ticks + clear-turtles + clear-patches +
+  ct           ;; Equivale a clear-ticks + clear-turtles + clear-patches +
                ;; clear-drawing + clear-all-plots + clear-output.
   set-patch-size 12
+ ; reset-simple-plot
   init-globals
   ;Cargar las coordenadas de los shapefiles
   setup-geo-data
@@ -114,7 +121,7 @@ to setup ;; Para inicializar la simulación.
   reset-ticks  ;; Para inicializar el contador de ticks.
 end
 
-to go ;; Para ejecutar la simulación.
+to go-until-all-cars-evacuated ;; Para ejecutar la simulación.
   if(ticks mod 60 = 0)
   [
     check-if-hatch
@@ -122,19 +129,70 @@ to go ;; Para ejecutar la simulación.
   ask cars [drive]
    ask pedestrians[walk check-if-pedestrian-exit]
   tick
-  if ticks >= 3600  ;; En caso de que la simulación esté controlada por cantidad de ticks.
-    [stop]
+ ; if ticks >= 3600  ;; En caso de que la simulación esté controlada por cantidad de ticks.
+  let movil-agents (turtle-set cars pedestrians)
+  if count movil-agents <= 0
+  [stop]
+end
+
+to go-until-runtime ;; Para ejecutar la simulación.
+  if(ticks mod 60 = 0)
+  [
+    check-if-hatch
+  ]
+  ask cars [drive]
+   ask pedestrians[walk check-if-pedestrian-exit]
+  tick
+  if ticks >= runtime  ;; En caso de que la simulación esté controlada por cantidad de ticks.
+  [
+    count-cars-left
+    update-values
+    stop
+  ]
 end
 
 ;;*******************************
 ;; Otras funciones globales:
 ;;*******************************
 to-report random-rayleigh [ p ]
-  if p > 0
+  ifelse p > 0
   [
     let u random-float 1
     report p * sqrt (-2 * log u e )
   ]
+  [
+    report 0
+  ]
+end
+
+to reset-plots
+  set-current-plot "Time to evacuate with entrance"
+  clear-plot
+  set-current-plot "Cars not evacuated"
+  clear-plot
+end
+
+to-report report-num-car-exit
+  report num-car-exit
+end
+
+to-report cars-ocuppation
+  report percentage-occupation-parking
+end
+
+to count-cars-left
+  set cars-left count cars
+  ask exitParkings
+  [
+    if occupationParking > 0
+    [set cars-left cars-left + occupationParking]
+  ]
+end
+
+to update-values ;; Para actualizar todas las salidas del modelo.
+  set-current-plot "Cars not evacuated"
+  set-current-plot-pen word "pen-" percentage-occupation-parking
+  plotxy desesperation cars-left
 end
 
 
@@ -328,7 +386,7 @@ to init-parking-exits
     [
       let closest-parking patches in-radius 3 with [description = "Parking"]
       set occupationParking [occupation] of one-of closest-parking * percentage-occupation-parking
-      hide-turtle
+      ;hide-turtle
     ]
   ]
 end
@@ -392,6 +450,10 @@ to init-cars
   ]
 end
 
+to evacuate
+  set num-car-exit num-car-exit + 1
+  ask self [die]
+end
 
 to drive
 
@@ -528,7 +590,7 @@ to check-if-exits
   if gis:intersects? patch-here  exits-cars-dataset
   [
      ;show "sale"
-     die
+     evacuate
   ]
 end
 
@@ -657,11 +719,11 @@ ticks
 
 BUTTON
 242
-777
-305
-810
-NIL
-go
+775
+419
+808
+Go until all cars evacuated
+go-until-all-cars-evacuated
 T
 1
 T
@@ -698,7 +760,7 @@ percentage-occupation-parking
 percentage-occupation-parking
 0.1
 1
-0.3
+0.1
 0.1
 1
 NIL
@@ -713,7 +775,7 @@ occupation-street
 occupation-street
 0
 100
-57.0
+10.0
 1
 1
 NIL
@@ -728,7 +790,7 @@ occupation-buildings
 occupation-buildings
 0
 10000
-2000.0
+1000.0
 500
 1
 NIL
@@ -743,7 +805,7 @@ desesperation
 desesperation
 1
 60
-30.0
+0.0
 1
 1
 NIL
@@ -769,7 +831,7 @@ acceleration
 acceleration
 0.001
 0.01
-0.004
+0.003
 0.001
 1
 NIL
@@ -784,8 +846,103 @@ deceleration
 deceleration
 0.01
 0.1
+0.04
 0.01
-0.01
+1
+NIL
+HORIZONTAL
+
+PLOT
+14
+471
+259
+621
+Time to evacuate with entrance
+Seconds
+Cars
+0.0
+6000.0
+0.0
+500.0
+true
+false
+"" ""
+PENS
+"pen-0" 1.0 0 -13791810 true "" "if entrances-are-exits = false [ plot num-car-exit] ;;cambie el grafico segun las salidas habilitadas"
+"pen-1" 1.0 0 -13840069 true "" "if entrances-are-exits = true [ plot num-car-exit] ;;cambie el grafico segun las salidas habilitadas"
+
+PLOT
+15
+318
+261
+464
+Cars not evacuated
+Desesperation
+Cars left
+0.0
+60.0
+0.0
+70.0
+true
+false
+"" ""
+PENS
+"pen-0.1" 1.0 0 -7500403 true "" ""
+"pen-0.2" 1.0 0 -2674135 true "" ""
+"pen-0.3" 1.0 0 -955883 true "" ""
+"pen-0.4" 1.0 0 -6459832 true "" ""
+"pen-0.5" 1.0 0 -1184463 true "" ""
+"pen-0.6" 1.0 0 -10899396 true "" ""
+"pen-0.7" 1.0 0 -11783835 true "" ""
+"pen-0.8" 1.0 0 -5825686 true "" ""
+"pen-0.9" 1.0 0 -14454117 true "" ""
+"pen-1" 1.0 0 -15390905 true "" ""
+
+BUTTON
+278
+321
+358
+354
+Clear plots
+reset-plots
+NIL
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+BUTTON
+242
+815
+360
+848
+Go until runtime
+go-until-runtime
+T
+1
+T
+OBSERVER
+NIL
+NIL
+NIL
+NIL
+1
+
+SLIDER
+240
+854
+412
+887
+runtime
+runtime
+3600
+10800
+3600.0
+3600
 1
 NIL
 HORIZONTAL
@@ -1196,6 +1353,47 @@ NetLogo 6.0.1
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
+<experiments>
+  <experiment name="Entrances-as-exists" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go-until-all-cars-evacuated</go>
+    <metric>report-num-car-exit</metric>
+    <enumeratedValueSet variable="entrances-are-exits">
+      <value value="false"/>
+      <value value="true"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="occupation-buildings">
+      <value value="2000"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="desesperation">
+      <value value="60"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="occupation-street">
+      <value value="50"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="percentage-occupation-parking" first="0.1" step="0.1" last="1"/>
+    <enumeratedValueSet variable="acceleration">
+      <value value="0.003"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="deceleration">
+      <value value="0.05"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="Cars left" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go-until-runtime</go>
+    <enumeratedValueSet variable="runtime">
+      <value value="3600"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="occupation-buildings" first="1000" step="1000" last="10000"/>
+    <steppedValueSet variable="percentage-occupation-parking" first="0.1" step="0.1" last="1"/>
+    <steppedValueSet variable="desesperation" first="0" step="10" last="60"/>
+    <steppedValueSet variable="occupation-street" first="10" step="10" last="100"/>
+    <enumeratedValueSet variable="entrances-are-exits">
+      <value value="false"/>
+    </enumeratedValueSet>
+  </experiment>
+</experiments>
 @#$#@#$#@
 @#$#@#$#@
 default
