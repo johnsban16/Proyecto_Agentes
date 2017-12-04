@@ -84,6 +84,12 @@ exitParkings-own
   occupationParking
 ]
 
+congestion-detectors-own
+[
+  dt-id
+  time-congested
+]
+
 ;;**************************************
 ;; INICIALIZACIÓN DE VARIABLES GLOBALES:
 ;;**************************************
@@ -116,6 +122,10 @@ to setup ;; Para inicializar la simulación.
   [
     init-patch
   ]
+  ask congestion-detectors
+  [
+    set-own-id
+  ]
   init-pedestrians
   init-cars
   reset-ticks  ;; Para inicializar el contador de ticks.
@@ -127,7 +137,8 @@ to go-until-all-cars-evacuated ;; Para ejecutar la simulación.
     check-if-hatch
   ]
   ask cars [drive]
-   ask pedestrians[walk check-if-pedestrian-exit]
+  ask pedestrians[walk check-if-pedestrian-exit]
+  ask congestion-detectors[check-if-congested]
   tick
  ; if ticks >= 3600  ;; En caso de que la simulación esté controlada por cantidad de ticks.
   let movil-agents (turtle-set cars pedestrians)
@@ -141,7 +152,8 @@ to go-until-runtime ;; Para ejecutar la simulación.
     check-if-hatch
   ]
   ask cars [drive]
-   ask pedestrians[walk check-if-pedestrian-exit]
+  ask pedestrians[walk check-if-pedestrian-exit]
+  ask congestion-detectors[check-if-congested]
   tick
   if ticks >= runtime  ;; En caso de que la simulación esté controlada por cantidad de ticks.
   [
@@ -169,6 +181,8 @@ to reset-plots
   set-current-plot "Time to evacuate with entrance"
   clear-plot
   set-current-plot "Cars not evacuated"
+  clear-plot
+  set-current-plot "Congestion"
   clear-plot
 end
 
@@ -425,6 +439,7 @@ to init-congestion-detectors
     sprout-congestion-detectors 1
     [
       ;hide-turtle
+      set time-congested 0
     ]
   ]
 end
@@ -683,6 +698,32 @@ to check-if-pedestrian-exit
   ]
 end
 
+;;-----------------------------------
+;; Funciones de congestion-detectors:
+;;-----------------------------------
+
+to set-own-id
+  if xcor = -36 and ycor = 22
+  [
+    set dt-id 1
+  ]
+  if xcor = -29 and ycor = -15
+  [
+    set dt-id 2
+  ]
+  if xcor = -27 and ycor = -40
+  [
+    set dt-id 3
+  ]
+end
+
+to check-if-congested
+  let congested-cars cars in-radius 3 with[speed <= 0.1]
+  if count congested-cars > 0
+  [
+    set time-congested time-congested + 1
+  ]
+end
 
 
 ;;------------------------
@@ -721,10 +762,10 @@ ticks
 30.0
 
 BUTTON
-242
-775
-419
-808
+275
+783
+452
+816
 Go until all cars evacuated
 go-until-all-cars-evacuated
 T
@@ -738,10 +779,10 @@ NIL
 1
 
 BUTTON
-242
-737
-305
-770
+274
+745
+334
+780
 NIL
 setup
 NIL
@@ -763,7 +804,7 @@ percentage-occupation-parking
 percentage-occupation-parking
 0.1
 1
-0.2
+1.0
 0.1
 1
 NIL
@@ -778,7 +819,7 @@ occupation-street
 occupation-street
 0
 100
-50.0
+100.0
 1
 1
 NIL
@@ -793,7 +834,7 @@ occupation-buildings
 occupation-buildings
 0
 10000
-2000.0
+10000.0
 500
 1
 NIL
@@ -808,7 +849,7 @@ desesperation
 desesperation
 1
 60
-60.0
+50.0
 1
 1
 NIL
@@ -919,10 +960,10 @@ NIL
 1
 
 BUTTON
-242
-815
-360
-848
+275
+823
+393
+856
 Go until runtime
 go-until-runtime
 T
@@ -936,10 +977,10 @@ NIL
 1
 
 SLIDER
-240
-854
-412
-887
+273
+862
+445
+895
 runtime
 runtime
 3600
@@ -949,6 +990,26 @@ runtime
 1
 NIL
 HORIZONTAL
+
+PLOT
+15
+630
+257
+786
+Congestion
+Seconds
+Time congested
+0.0
+3600.0
+0.0
+350.0
+true
+false
+"" ""
+PENS
+"pen-0" 1.0 0 -14985354 true "let c1 congestion-detectors with [dt-id = 1]" "plotxy ticks item 0 [time-congested] of congestion-detectors with [dt-id = 1]"
+"pen-1" 1.0 0 -2674135 true "" "plotxy ticks item 0 [time-congested] of congestion-detectors with [dt-id = 2]"
+"pen-2" 1.0 0 -13840069 true "" "plotxy ticks item 0 [time-congested] of congestion-detectors with [dt-id = 3]"
 
 @#$#@#$#@
 ## ¿DE QUÉ SE TRATA?
@@ -1352,7 +1413,7 @@ false
 Polygon -7500403 true true 270 75 225 30 30 225 75 270
 Polygon -7500403 true true 30 75 75 30 270 225 225 270
 @#$#@#$#@
-NetLogo 6.0.1
+NetLogo 6.0.2
 @#$#@#$#@
 @#$#@#$#@
 @#$#@#$#@
@@ -1394,6 +1455,26 @@ NetLogo 6.0.1
     <steppedValueSet variable="percentage-occupation-parking" first="0.1" step="0.1" last="1"/>
     <steppedValueSet variable="desesperation" first="0" step="15" last="60"/>
     <steppedValueSet variable="occupation-street" first="10" step="10" last="100"/>
+    <enumeratedValueSet variable="entrances-are-exits">
+      <value value="false"/>
+    </enumeratedValueSet>
+  </experiment>
+  <experiment name="Congestion-Points" repetitions="1" runMetricsEveryStep="true">
+    <setup>setup</setup>
+    <go>go-until-runtime</go>
+    <enumeratedValueSet variable="occupation-buildings">
+      <value value="10000"/>
+    </enumeratedValueSet>
+    <steppedValueSet variable="desesperation" first="0" step="10" last="60"/>
+    <enumeratedValueSet variable="occupation-street">
+      <value value="100"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="runtime">
+      <value value="3600"/>
+    </enumeratedValueSet>
+    <enumeratedValueSet variable="percentage-occupation-parking">
+      <value value="1"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="entrances-are-exits">
       <value value="false"/>
     </enumeratedValueSet>
