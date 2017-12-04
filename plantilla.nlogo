@@ -482,7 +482,10 @@ to steer
     ]
   ]
   [
-    ask self [steer-without-lanes]
+    carefully[
+      ask self [steer-without-lanes]
+    ]
+    [print "steer without lanes imposible"]
   ]
 end
 
@@ -760,7 +763,7 @@ percentage-occupation-parking
 percentage-occupation-parking
 0.1
 1
-0.1
+0.2
 0.1
 1
 NIL
@@ -775,7 +778,7 @@ occupation-street
 occupation-street
 0
 100
-10.0
+50.0
 1
 1
 NIL
@@ -790,7 +793,7 @@ occupation-buildings
 occupation-buildings
 0
 10000
-1000.0
+2000.0
 500
 1
 NIL
@@ -805,7 +808,7 @@ desesperation
 desesperation
 1
 60
-0.0
+60.0
 1
 1
 NIL
@@ -846,7 +849,7 @@ deceleration
 deceleration
 0.01
 0.1
-0.04
+0.08
 0.01
 1
 NIL
@@ -868,7 +871,7 @@ true
 false
 "" ""
 PENS
-"pen-0" 1.0 0 -13791810 true "" "if entrances-are-exits = false [ plot num-car-exit] ;;cambie el grafico segun las salidas habilitadas"
+"pen-0" 1.0 0 -12030287 true "" "if entrances-are-exits = false [ plot num-car-exit] ;;cambie el grafico segun las salidas habilitadas"
 "pen-1" 1.0 0 -13840069 true "" "if entrances-are-exits = true [ plot num-car-exit] ;;cambie el grafico segun las salidas habilitadas"
 
 PLOT
@@ -1358,6 +1361,9 @@ NetLogo 6.0.1
     <setup>setup</setup>
     <go>go-until-all-cars-evacuated</go>
     <metric>report-num-car-exit</metric>
+    <enumeratedValueSet variable="percentage-occupation-parking">
+      <value value="0.5"/>
+    </enumeratedValueSet>
     <enumeratedValueSet variable="entrances-are-exits">
       <value value="false"/>
       <value value="true"/>
@@ -1371,23 +1377,22 @@ NetLogo 6.0.1
     <enumeratedValueSet variable="occupation-street">
       <value value="50"/>
     </enumeratedValueSet>
-    <steppedValueSet variable="percentage-occupation-parking" first="0.1" step="0.1" last="1"/>
     <enumeratedValueSet variable="acceleration">
       <value value="0.003"/>
     </enumeratedValueSet>
     <enumeratedValueSet variable="deceleration">
-      <value value="0.05"/>
+      <value value="0.08"/>
     </enumeratedValueSet>
   </experiment>
-  <experiment name="Cars left" repetitions="1" runMetricsEveryStep="true">
+  <experiment name="Cars left" repetitions="1" runMetricsEveryStep="false">
     <setup>setup</setup>
     <go>go-until-runtime</go>
     <enumeratedValueSet variable="runtime">
       <value value="3600"/>
     </enumeratedValueSet>
-    <steppedValueSet variable="occupation-buildings" first="1000" step="1000" last="10000"/>
+    <steppedValueSet variable="occupation-buildings" first="1000" step="3000" last="10000"/>
     <steppedValueSet variable="percentage-occupation-parking" first="0.1" step="0.1" last="1"/>
-    <steppedValueSet variable="desesperation" first="0" step="10" last="60"/>
+    <steppedValueSet variable="desesperation" first="0" step="15" last="60"/>
     <steppedValueSet variable="occupation-street" first="10" step="10" last="100"/>
     <enumeratedValueSet variable="entrances-are-exits">
       <value value="false"/>
